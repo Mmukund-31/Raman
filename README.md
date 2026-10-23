@@ -72,8 +72,15 @@ Endpoints: `GET /api/urine/datasets`, `GET /api/urine/study/{trial|zenodo}`, `GE
 The diabetes study is the first step of a personalised-healthcare programme (roadmap on the study page: kidney and metabolic health, multi-biofluid profiling, personal health baselines). Its **Personal profile** view reads each trial participant against their own week-0 baseline. A change counts as meaningful only if it exceeds the reference change value RCV = 1.96·√2·√(SDw² + (CV·baseline)²). SDw is measured from the visit-to-visit spread of the control participants; the within-person CV (20% for glucose and ketones, `ASSUMED_CV` in `services/urine.py`) is an assumption until repeat samples from stable patients are available. Endpoint: `GET /api/urine/participant/{id}`.
 
 ## Deploy on Render
-`render.yaml` is a Render Blueprint that creates two services from this repository:
-- **ramanreach-api**: Python web service (FastAPI). It builds from the repository root because it reads `data/`, runs on Python 3.12.8, and exposes the health check `/health`.
-- **ramanreach-web**: static site (Vite build of `frontend/`). Its `VITE_API_URL` is filled in automatically with the API's address.
+The app runs as **one Render Web Service**: the build compiles the website into `frontend/dist`, and FastAPI serves it next to the API from the same URL (so no `VITE_API_URL` is needed).
 
-Steps: push to GitHub → Render Dashboard → **New → Blueprint** → select this repository → **Apply**. `ANTHROPIC_API_KEY` is optional; leave it empty to use the template summaries. On the free plan the API sleeps after 15 minutes without traffic, so the first request after a pause takes about 30–60 s. The optional PyTorch deep-learning models are not installed on Render.
+| Setting | Value |
+|---|---|
+| Language | Python 3 |
+| Root Directory | *(leave empty)* |
+| Build Command | `pip install -r backend/requirements.txt && cd frontend && npm ci && npm run build` |
+| Start Command | `cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT` |
+| Environment | `PYTHON_VERSION=3.12.8`, `NODE_VERSION=22`, optional `ANTHROPIC_API_KEY` |
+| Health Check Path | `/health` |
+
+`render.yaml` holds the same settings as a Blueprint (Dashboard → New → Blueprint). On the free plan the service sleeps after 15 minutes without traffic, so the first request after a pause takes about 30–60 s. The optional PyTorch deep-learning models are not installed.

@@ -276,3 +276,22 @@ def full_report_html(report: dict):
         return report_html.build(report)
     except (KeyError, TypeError, IndexError, ValueError):
         raise HTTPException(422, "Body must be a /api/full-report result.")
+
+
+# ---------------------------------------------------------------- the website, when deployed as one service
+
+FRONTEND_DIST = pathlib.Path(__file__).resolve().parents[2] / "frontend" / "dist"
+
+
+@app.get("/{path:path}", include_in_schema=False)
+def website(path: str):
+    """Serves the built frontend (npm run build) so the API and the site can run as one web service. Registered last, so
+    every API route wins; unknown /api paths stay 404 instead of returning the page. Without a build this is a plain 404."""
+    root = FRONTEND_DIST.resolve()
+    if path.startswith("api/") or not (root / "index.html").is_file():
+        raise HTTPException(404, "Not found.")
+    target = (root / path).resolve()
+    if path and target.is_file() and root in target.parents:  # no path traversal outside dist/
+        cache = "public, max-age=31536000, immutable" if path.startswith("assets/") else "no-cache"
+        return FileResponse(target, headers={"Cache-Control": cache})
+    return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})

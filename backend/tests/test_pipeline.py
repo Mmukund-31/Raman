@@ -182,3 +182,23 @@ def test_scores_never_described_as_probabilities_of_identification():
     assert "provisional" in r["quality_thresholds"]["status"]  # SNR/coverage stay provisional even once scores are calibrated
     assert all("not the probability of identification" in m["explanation"] for m in r["matches"] if m["overlap"])
     assert r["is_diagnostic"] is False
+
+
+def test_serves_the_built_website_without_shadowing_the_api(tmp_path, monkeypatch):
+    from app import main
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<html>app</html>")
+    (dist / "assets" / "app.js").write_text("console.log(1)")
+    (tmp_path / "secret.txt").write_text("x")
+    monkeypatch.setattr(main, "FRONTEND_DIST", dist)
+    c = TestClient(main.app)
+    assert c.get("/").text == "<html>app</html>"
+    assert c.get("/assets/app.js").headers["cache-control"].startswith("public")
+    assert c.get("/some/page").text == "<html>app</html>"  # unknown paths fall back to the single-page app
+    assert c.get("/health").json()["status"] == "ok"
+    assert c.get("/api/examples").status_code == 200
+    assert c.get("/api/does-not-exist").status_code == 404
+    assert "x" != c.get("/../secret.txt").text
+    monkeypatch.setattr(main, "FRONTEND_DIST", tmp_path / "missing")
+    assert c.get("/").status_code == 404
