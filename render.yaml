@@ -1,0 +1,41 @@
+# Render Blueprint: Dashboard → New → Blueprint → pick this repository. Creates the API and the website together.
+services:
+  # FastAPI backend. Built from the repository root because it reads the shared data/ folder.
+  - type: web
+    name: ramanreach-api
+    runtime: python
+    plan: free
+    region: oregon
+    buildCommand: pip install --upgrade pip && pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    buildFilter:
+      paths: [backend/**, data/**, render.yaml]
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      # Optional: AI-written report summaries. Leave empty to use the built-in template summaries.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+  # React/Vite frontend as a static site. Hash routing (#/diabetes, ...) needs no rewrite rules.
+  - type: web
+    name: ramanreach-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    buildFilter:
+      paths: [frontend/**]
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: ramanreach-api
+          property: host

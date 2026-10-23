@@ -1,6 +1,8 @@
 import type { Example, Options, Result, TestFile } from '../types'
 
-export const BASE = import.meta.env.VITE_API_URL ?? ''
+// Render's Blueprint passes the API service as a bare host ("x.onrender.com"); a full URL or '' (dev proxy) is used as is.
+const API = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '')
+export const BASE = API && !/^https?:\/\//.test(API) ? `https://${API}` : API
 
 export async function handle<T>(r: Response): Promise<T> {
   if (!r.ok) {

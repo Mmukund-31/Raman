@@ -70,3 +70,10 @@ Endpoints: `GET /api/urine/datasets`, `GET /api/urine/study/{trial|zenodo}`, `GE
 
 ### Personalised monitoring (Study 1 of the programme)
 The diabetes study is the first step of a personalised-healthcare programme (roadmap on the study page: kidney and metabolic health, multi-biofluid profiling, personal health baselines). Its **Personal profile** view reads each trial participant against their own week-0 baseline. A change counts as meaningful only if it exceeds the reference change value RCV = 1.96·√2·√(SDw² + (CV·baseline)²). SDw is measured from the visit-to-visit spread of the control participants; the within-person CV (20% for glucose and ketones, `ASSUMED_CV` in `services/urine.py`) is an assumption until repeat samples from stable patients are available. Endpoint: `GET /api/urine/participant/{id}`.
+
+## Deploy on Render
+`render.yaml` is a Render Blueprint that creates two services from this repository:
+- **ramanreach-api**: Python web service (FastAPI). It builds from the repository root because it reads `data/`, runs on Python 3.12.8, and exposes the health check `/health`.
+- **ramanreach-web**: static site (Vite build of `frontend/`). Its `VITE_API_URL` is filled in automatically with the API's address.
+
+Steps: push to GitHub → Render Dashboard → **New → Blueprint** → select this repository → **Apply**. `ANTHROPIC_API_KEY` is optional; leave it empty to use the template summaries. On the free plan the API sleeps after 15 minutes without traffic, so the first request after a pause takes about 30–60 s. The optional PyTorch deep-learning models are not installed on Render.
