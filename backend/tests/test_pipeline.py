@@ -95,3 +95,90 @@ def test_api_errors_and_report():
     html = client.post("/api/report", json=r).text
     assert "NON-DIAGNOSTIC" in html and "Limitations" in html
     assert client.post("/api/report", json={}).status_code == 422
+
+
+# ---- regression tests: SNR, metadata, invalid values, coverage, inconclusive, provenance ----
+from app.services import quality  # noqa: E402
+from app.services.validation import Spectrum  # noqa: E402
+
+
+def _synthetic_spectrum(noise, seed=1):
+    x = np.arange(600, 3001, 2.0)
+    y = 500 + 1000 / (1 + ((x - 1500) / 8) ** 2) + np.random.default_rng(seed).normal(0, noise, x.size)
+    return x, y
+
+
+def test_snr_not_artificial_when_smoothing_disabled():
+    """Regression: smooth=False used to give noise=0 -> snr=1e9."""
+    x, y = _synthetic_spectrum(20)
+    r = pipeline.analyze(Spectrum(x, y), options={"smooth": False})
+    assert r["snr"] is not None and 1 < r["snr"] < 1e4
+    r2 = pipeline.analyze(Spectrum(x, y), options={"smooth": True})
+    assert abs(r["snr"] - r2["snr"]) < 1e-9  # SNR is independent of the smoothing choice
+
+
+def test_snr_tracks_noise_level_and_noiseless_is_undefined_not_huge():
+    assert quality.estimate_snr(_synthetic_spectrum(5)[1]) > quality.estimate_snr(_synthetic_spectrum(200)[1])
+    assert quality.estimate_snr(np.linspace(0, 1, 100)) is None  # zero noise estimate -> undefined
+    status, reasons = quality.assess(None, [], [])
+    assert status == "inconclusive" and any("could not be estimated" in r for r in reasons)
+
+
+def test_inconclusive_when_smoothing_off_and_noisy_via_api():
+    r = client.post("/api/analyze/example/demo_noisy_synthetic", json={"smooth": False}).json()
+    assert r["status"] == "inconclusive" and r["snr"] < 1e4 and r["top_matches"] == []
+
+
+def test_missing_excitation_is_metadata_not_calibration():
+    csv = csv_bytes(np.arange(600, 1000, 4.0), 100 + 50 / (1 + ((np.arange(600, 1000, 4.0) - 800) / 6) ** 2) + np.arange(100) % 3)
+    r = client.post("/api/analyze", files={"file": ("a.csv", csv)}).json()
+    m = r["metadata"]
+    assert m["excitation_nm"] is None and m["excitation_source"] == "not provided"
+    assert m["calibration_status"] == "not_verified" and m["wavelength_converted_to_raman_shift"] is False
+    assert any("Excitation wavelength not provided" in w for w in r["quality_warnings"])
+
+
+def test_declared_excitation_never_verifies_calibration():
+    r = client.post("/api/analyze/example/demo_paracetamol_synthetic").json()
+    assert r["metadata"]["excitation_source"] == "user-declared" and r["metadata"]["calibration_status"] == "not_verified"
+    x = np.linspace(540, 600, 80)
+    raw = csv_bytes(x, 10 + 40 / (1 + ((x - 570) / 2) ** 2) + np.arange(80) % 5, "wavelength_nm,intensity")
+    r = client.post("/api/analyze", files={"file": ("w.csv", raw)}, data={"excitation_nm": "532"}).json()
+    assert r["metadata"]["wavelength_converted_to_raman_shift"] is True and r["metadata"]["calibration_status"] == "not_verified"
+    assert client.post("/api/analyze", files={"file": ("w.csv", raw)}).status_code == 422  # no excitation -> reject
+
+
+def test_invalid_values_rejected():
+    x = list(range(60))
+    with pytest.raises(ValidationError, match="NaN or infinite"):
+        parse_csv(csv_bytes(x, ["inf"] + list(range(59))))
+    with pytest.raises(ValidationError, match="positive"):  # non-positive wavelengths cannot be converted
+        parse_csv(csv_bytes(np.linspace(-5, 5, 80), np.arange(80) % 7, "wavelength_nm,intensity"), 532)
+    for bad in ({"normalize": "bogus"}, {"window": 1}, {"als_p": 2}):
+        assert client.post("/api/analyze/example/demo_paracetamol_synthetic", json=bad).status_code == 422
+    assert client.post("/api/analyze", files={"file": ("a.csv", b"raman_shift_cm1,intensity\n" + b"1,2\n" * 60)}).status_code == 422
+
+
+def test_poor_coverage_is_inconclusive_with_reason():
+    r = client.post("/api/analyze/example/demo_narrow_range_synthetic").json()
+    assert r["status"] == "inconclusive"
+    assert any("Insufficient overlap" in w for w in r["quality_warnings"])
+    assert max(m["coverage"] for m in r["matches"]) < quality.MIN_COVERAGE
+
+
+def test_provenance_visible_in_api_and_report():
+    r = client.post("/api/analyze/example/demo_paracetamol_synthetic").json()
+    assert r["data_provenance"]["sample"]["category"] == "synthetic" and r["data_provenance"]["references_all_synthetic"] is True
+    assert any("SYNTHETIC" in w for w in r["quality_warnings"])
+    html = client.post("/api/report", json=r).text
+    assert "SYNTHETIC DATA" in html and "not_verified" in html and "provisional" in html.lower()
+    up = client.post("/api/analyze", files={"file": ("u.csv", open(pipeline.DATA_DIR / "examples/demo_ethanol_synthetic.csv", "rb"))}).json()
+    assert up["data_provenance"]["sample"]["category"] == "user_supplied"  # uploads are never labelled as synthetic or validated
+
+
+def test_scores_never_described_as_probabilities_of_identification():
+    r = client.post("/api/analyze/example/demo_paracetamol_synthetic").json()
+    assert "not probabilities of identification" in r["similarity_note"]
+    assert r["quality_thresholds"]["status"].startswith("provisional")
+    assert all("not the probability of identification" in m["explanation"] for m in r["matches"] if m["overlap"])
+    assert r["is_diagnostic"] is False

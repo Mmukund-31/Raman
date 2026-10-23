@@ -6,3 +6,8 @@ scipy
 python-multipart
 pytest
 httpx
+# scikit-learn is the preferred ML backend; app/services/ml.py falls back to NumPy/SciPy if it cannot be imported
+scikit-learn
+# Optional, only for the deep-learning baselines (CNN-1D, ResNet-18-1D): CPU wheel via
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# torch

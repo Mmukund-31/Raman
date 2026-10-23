@@ -1,8 +1,8 @@
 import type { Example, Options, Result } from '../types'
 
-const BASE = import.meta.env.VITE_API_URL ?? ''
+export const BASE = import.meta.env.VITE_API_URL ?? ''
 
-async function handle<T>(r: Response): Promise<T> {
+export async function handle<T>(r: Response): Promise<T> {
   if (!r.ok) {
     let msg = `Request failed (${r.status})`
     try {

@@ -21,6 +21,8 @@ class Spectrum:
     x: np.ndarray
     y: np.ndarray
     warnings: list[str] = field(default_factory=list)
+    coordinate_input: str = "raman_shift"  # what the file contained: 'raman_shift' | 'wavelength'
+    converted: bool = False  # True only if wavelength was converted using a user-declared excitation wavelength
 
 
 def parse_csv(raw: bytes, excitation_nm: float | None = None) -> Spectrum:
@@ -58,13 +60,16 @@ def parse_csv(raw: bytes, excitation_nm: float | None = None) -> Spectrum:
     if x.size < MIN_POINTS:
         raise ValidationError(f"Only {x.size} points; at least {MIN_POINTS} are required.")
     warnings: list[str] = []
+    converted = False
     if xi is None:
         if not excitation_nm or excitation_nm <= 0:
             raise ValidationError("Wavelength input needs a positive excitation wavelength (nm) to convert to Raman shift.")
         if (x <= 0).any():
             raise ValidationError("Wavelengths must be positive.")
         x = 1e7 / excitation_nm - 1e7 / x
-        warnings.append(f"Converted wavelength to Raman shift using excitation {excitation_nm:g} nm.")
+        converted = True
+        warnings.append(f"Converted wavelength to Raman shift using user-declared excitation {excitation_nm:g} nm "
+                        "(conversion only; this does not verify instrument calibration).")
     order = np.argsort(x, kind="stable")
     if not np.array_equal(order, np.arange(x.size)):
         x, y = x[order], y[order]
@@ -73,4 +78,4 @@ def parse_csv(raw: bytes, excitation_nm: float | None = None) -> Spectrum:
         raise ValidationError("Duplicate spectral coordinates found.")
     if np.ptp(y) == 0:
         raise ValidationError("Intensity is constant; no spectral information.")
-    return Spectrum(x, y, warnings)
+    return Spectrum(x, y, warnings, "raman_shift" if xi is not None else "wavelength", converted)

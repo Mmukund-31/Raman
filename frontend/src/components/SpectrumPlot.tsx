@@ -1,32 +1,25 @@
-import Plotly from 'plotly.js-basic-dist-min'
 import type { Data } from 'plotly.js'
-import createPlotlyComponent from 'react-plotly.js/factory'
-import type { Result } from '../types'
+import { Figure } from './report/Figure'
+import { COLORS } from './theme'
+import type { Peak } from '../types'
 
-const Plot = createPlotlyComponent(Plotly)
+export interface SpectrumSeries { x: number[]; raw: number[]; baseline: number[]; processed: number[]; peaks: Peak[] }
 
-export function SpectrumPlot({ r, kind }: { r: Result; kind: 'raw' | 'processed' }) {
+export function SpectrumPlot({ r, kind, height = 360 }: { r: SpectrumSeries; kind: 'raw' | 'processed'; height?: number }) {
   const raw = kind === 'raw'
-  const traces: Data[] = [
-    { x: r.x, y: raw ? r.raw : r.processed, type: 'scatter', mode: 'lines', name: raw ? 'Raw' : 'Processed', line: { color: '#1d4ed8', width: 1.5 } },
-  ]
-  if (raw) traces.push({ x: r.x, y: r.baseline, type: 'scatter', mode: 'lines', name: 'Estimated baseline', line: { color: '#b45309', dash: 'dash', width: 1.5 } })
+  const traces: Data[] = [{
+    x: r.x, y: raw ? r.raw : r.processed, type: 'scatter', mode: 'lines', name: raw ? 'Raw spectrum' : 'Processed spectrum',
+    line: { color: COLORS.accent, width: 1.6 }, hovertemplate: '%{x:.1f} cm⁻¹<br>%{y:.4g}<extra></extra>',
+  }]
+  if (raw) traces.push({ x: r.x, y: r.baseline, type: 'scatter', mode: 'lines', name: 'Estimated baseline (subtracted)', line: { color: COLORS.baseline, dash: 'dash', width: 1.4 }, hoverinfo: 'skip' })
   else traces.push({
-    x: r.peaks.map(p => p.position), y: r.peaks.map(p => p.height), type: 'scatter', mode: 'markers', name: 'Peaks',
-    marker: { color: '#be123c', size: 8, symbol: 'diamond' },
+    x: r.peaks.map(p => p.position), y: r.peaks.map(p => p.height), type: 'scatter', mode: 'text+markers', name: 'Detected peaks (label = position, cm⁻¹)',
+    text: r.peaks.map(p => p.position.toFixed(0)), textposition: 'top center', textfont: { size: 10, color: COLORS.peak },
+    marker: { color: COLORS.peak, size: 7, symbol: 'diamond' },
+    hovertemplate: 'Peak at %{x:.1f} cm⁻¹<br>height %{y:.4g}<extra></extra>',
   })
   return (
-    <Plot
-      data={traces}
-      layout={{
-        title: { text: raw ? 'Raw spectrum' : 'Processed spectrum' },
-        xaxis: { title: { text: 'Raman shift (cm⁻¹)' } },
-        yaxis: { title: { text: raw ? 'Intensity (counts)' : 'Normalized intensity (a.u.)' } },
-        margin: { t: 40, r: 10, l: 60, b: 50 }, legend: { orientation: 'h', y: -0.25 }, height: 320,
-      }}
-      config={{ responsive: true, displaylogo: false }}
-      style={{ width: '100%' }}
-      useResizeHandler
-    />
+    <Figure data={traces} height={height} label={raw ? 'Raw spectrum with estimated baseline' : 'Processed spectrum with detected peaks'}
+      xTitle="Raman shift (cm⁻¹)" yTitle={raw ? 'Intensity (as supplied: counts or a.u.)' : 'Processed intensity (a.u., normalised)'} />
   )
 }

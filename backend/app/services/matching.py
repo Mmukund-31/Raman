@@ -31,3 +31,22 @@ def compare(x, y, refs):
         out.append({"reference_id": r["id"], "name": r["name"], "score": cosine(a, b),
                     "coverage": float(cov), "overlap": [float(rng[0]), float(rng[1])]})
     return sorted(out, key=lambda m: m["score"], reverse=True)
+
+
+PEAK_TOLERANCE = 10.0  # cm-1; provisional, chosen for readability, not derived from instrument resolution
+
+
+def peak_agreement(sample_pos, ref_pos, overlap, tol=PEAK_TOLERANCE):
+    """Which reference peaks inside the overlap have a detected sample peak within +/- tol cm-1."""
+    if overlap is None:
+        return {"tolerance_cm1": tol, "reference_peaks_in_overlap": 0, "matched": [], "unmatched_reference": []}
+    inside = [p for p in ref_pos if overlap[0] <= p <= overlap[1]]
+    matched, unmatched = [], []
+    for p in inside:
+        near = min(sample_pos, key=lambda s: abs(s - p), default=None)
+        if near is not None and abs(near - p) <= tol:
+            matched.append({"reference": p, "sample": near})
+        else:
+            unmatched.append(p)
+    return {"tolerance_cm1": tol, "reference_peaks_in_overlap": len(inside), "matched": matched,
+            "unmatched_reference": unmatched}
