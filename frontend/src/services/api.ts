@@ -1,4 +1,4 @@
-import type { Example, Options, Result } from '../types'
+import type { Example, Options, Result, TestFile } from '../types'
 
 export const BASE = import.meta.env.VITE_API_URL ?? ''
 
@@ -15,6 +15,10 @@ export async function handle<T>(r: Response): Promise<T> {
 }
 
 export const getExamples = () => fetch(`${BASE}/api/examples`).then(r => handle<Example[]>(r))
+export const getTestFiles = () => fetch(`${BASE}/api/test-files`).then(r => handle<TestFile[]>(r))
+export const testFileUrl = (id: string) => `${BASE}/api/test-files/${encodeURIComponent(id)}`
+export const testFilesZipUrl = () => `${BASE}/api/test-files/all.zip`
+export const exampleDownloadUrl = (id: string) => `${BASE}/api/examples/${encodeURIComponent(id)}/download`
 
 export const analyzeExample = (id: string, o: Options) =>
   fetch(`${BASE}/api/analyze/example/${id}`, {

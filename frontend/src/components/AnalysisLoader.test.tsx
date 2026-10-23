@@ -16,7 +16,7 @@ describe('AnalysisLoader', () => {
     expect(bar.getAttribute('aria-valuenow')).toBe('2')
     expect(screen.queryByText(/%/)).toBeNull() // no invented percentages
     const items = screen.getAllByRole('listitem').map(li => li.getAttribute('data-status'))
-    expect(items).toEqual(['done', 'done', 'running', 'pending', 'pending', 'pending', 'pending'])
+    expect(items).toEqual(['done', 'done', 'running', 'pending', 'pending', 'pending', 'pending', 'pending'])
   })
 
   it('labels skipped stages as lacking data rather than complete', () => {

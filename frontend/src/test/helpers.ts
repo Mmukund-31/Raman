@@ -4,7 +4,7 @@ import fixture from './report.fixture.json'
 /** A real (downsampled) report produced by the backend orchestrator for the paracetamol example. */
 export const reportFixture = () => structuredClone(fixture) as unknown as FullReport
 
-export const STAGE_IDS = ['validate', 'process', 'conditions', 'sensitivity', 'pca', 'models', 'report']
+export const STAGE_IDS = ['validate', 'process', 'conditions', 'sensitivity', 'pca', 'models', 'report', 'explain']
 
 export function stageEvents(upTo = STAGE_IDS.length): ProgressEvent[] {
   return STAGE_IDS.slice(0, upTo).flatMap((id, i) => [

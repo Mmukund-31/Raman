@@ -1,8 +1,8 @@
 # RamanReach
 
-Open-source web tool for inspecting, processing and comparing Raman spectra. **Experimental, non-diagnostic research prototype.**
+Open-source web tool for analysing Raman spectra: upload one file, every applicable analysis runs automatically, and the result is a single report that opens with a plain-language answer. **Experimental, non-diagnostic research prototype.**
 
-Pipeline: CSV upload → validation → ALS baseline → Savitzky–Golay smoothing → normalization → peak detection → cosine-similarity reference comparison → quality checks (can return **inconclusive**) → HTML report / processed CSV.
+Pipeline: file import (any common export) → validation → cosmic-ray removal → ALS baseline → Savitzky–Golay smoothing → normalisation → peak detection → comparison with measured (RRUFF, ROD) and synthetic references → calibrated quality gate (can return **inconclusive**) → robustness tests → plain-language explanation → HTML/PDF report and processed CSV.
 
 Inspired by the open-source [CubeRaman](https://github.com/jacobbusshart/CubeRaman) project. That repository states no license, so none of its code or data is reused.
 
@@ -17,22 +17,39 @@ cd frontend
 npm install
 npm run dev        # http://localhost:5173 (proxies /api to :8000)
 ```
-Tests: `cd backend; .venv\Scripts\python -m pytest`.
+Tests: `cd backend; .venv\Scripts\python -m pytest -q` (150 tests) and `cd frontend; npm test` (51 tests).
 For a separately hosted API set `VITE_API_URL` at frontend build time.
 
-## Input format
-`raman_shift_cm1,intensity` (≥50 rows, ≤5 MB). `wavelength_nm,intensity` is accepted only with an excitation wavelength (nm).
+### Optional: AI-written explanations
+Set `ANTHROPIC_API_KEY` before starting the backend. The report's "In plain words" card is then written by Claude (`RAMAN_LLM_MODEL`, default `claude-opus-5-5`) and fact-checked before it is shown; without a key, or if the check fails twice, a standard template summary is used. `RAMAN_LLM=off` disables the call. Only the numbered evidence facts are sent, never the uploaded file or the spectrum.
 
-## Status and data
-v0.2.0 - working local prototype, 20 backend tests. See `docs/methodology.md` (method, provisional thresholds), `docs/limitations.md` (status and limits) and `DATA_SOURCES.md` (provenance).
-All bundled spectra are **synthetic** (`data/generate_synthetic.py`). They demonstrate the workflow; they are not measurements, and near-perfect demo scores are circular because examples and references share one generator.
-Quality thresholds are provisional, unvalidated heuristics. Excitation wavelength is optional metadata; calibration is never verified.
+## Input formats
+One spectrum file, ≤ 5 MB, ≥ 50 points:
+- delimited text (`.csv .tsv .txt .dat`): comma, semicolon, tab, pipe or whitespace; decimal commas; any header wording (`Raman Shift (cm-1)`, `Wavenumber`, `#Wave`, `Counts`, …) or no header; metadata preambles and footers; UTF-8, Windows-1252 or UTF-16;
+- RRUFF `.txt` (`##KEY=value` header), Raman Open Database `.rod`/`.cif`, JCAMP-DX `.jdx`/`.dx` (XYPOINTS or uncompressed AFFN), JSON (`{"raman_shift": [...], "intensity": [...]}`, pairs or records);
+- several spectra in one file (extra intensity columns, or one spectrum per row under an axis row) are analysed together;
+- x-axis as Raman shift, wavelength (nm) or absolute wavenumber; the excitation wavelength is read from the file when it states one, otherwise the UI asks for it.
+Binary vendor files (`.spc`, `.wdf`, `.spe`, Excel) are rejected with an instruction to export as text. Small defects (a few empty cells, duplicate x values, unsorted axis) are repaired with a warning.
+
+## Test files
+`data/test_files/` holds 36 downloadable files (also on the Analyze page and at `GET /api/test-files/all.zip`), each with an expected outcome in `manifest.json`: real RRUFF/ROD spectra in every supported layout, acquisition problems (fluorescence, cosmic rays, noise, saturation, calibration offset, narrow range, mixture, material not in the library), synthetic organics, and invalid files with the error they should produce. Regenerate with `backend/scripts/make_test_files.py`.
+
+## Reference data and evaluation
+| Library | Contents | Built by |
+|---|---|---|
+| `measured` (`data/references_real/`) | 164 curated spectra of 60 minerals, ≥ 2 independent specimens each (RRUFF, ROD) | `scripts/fetch_rruff.py --select`, `scripts/fetch_rod.py`, `scripts/curate_library.py` |
+| `synthetic_demo` (`data/references/`) | 5 idealised organics | `data/generate_synthetic.py` |
+
+Uploads are compared with both (`library=auto`); bundled synthetic examples only with the synthetic set. `scripts/evaluate_library.py` runs a leave-one-specimen-out evaluation with negative controls and perturbations, calibrates the gate and writes `evaluation.json` + `thresholds.json`. Current cross-validated result: the gate answers for 59 % of held-out real spectra, is right 96 % of the time when it answers, and names a wrong material for 4 % of spectra whose material is absent from the library (`GET /api/evaluation`). Details: `docs/methodology.md`; sources and licences: `DATA_SOURCES.md`.
+
+## Workflow orchestration
+`backend/app/agent/graph.py` runs the analysis as a LangGraph state graph (validate → process → conditions → sensitivity → PCA → models → report → explain ⇄ fact-check → fallback). Each node calls the same stage function as the plain runner in `services/orchestrator.py`, so results are identical with or without LangGraph; the graph adds fatal-error routing and the draft → verify → retry/fallback loop for the explanation.
 
 ## API
-`GET /health`, `GET /api/examples`, `GET /api/references`, `POST /api/validate`, `POST /api/analyze`, `POST /api/analyze/example/{id}`, `POST /api/report`.
+`GET /health`, `GET /api/examples`, `GET /api/examples/{id}/download`, `GET /api/references?library=`, `GET /api/evaluation`, `GET /api/test-files`, `GET /api/test-files/{id}`, `GET /api/test-files/all.zip`, `POST /api/validate`, `POST /api/analyze`, `POST /api/analyze/example/{id}`, `POST /api/report`, `POST /api/full-report` (streams NDJSON stage events), `POST /api/full-report/example/{id}`, `POST /api/full-report/html`.
 
 ## What this is not
-Not a diagnostic. A similarity score is not a probability of identification. Never aim a Class 3B Raman laser at people.
+Not a diagnostic. A similarity score is not a probability of identification; a library can only recognise materials it contains. Never aim a Class 3B Raman laser at people.
 
 ## Research labs (v0.3.0 work in progress)
 Tabs: Analyze Spectrum, Experimental Conditions Lab, Wavenumber Sensitivity Lab, PCA Explorer, Model Benchmark, Spectral Translation, Reports & Methodology.

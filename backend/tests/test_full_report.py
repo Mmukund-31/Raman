@@ -115,7 +115,7 @@ def test_additional_spectra_enable_pca_and_condition_comparison():
 def test_invalid_csv_streams_an_error_and_stops():
     ev = events_of(post_full({"file": ("bad.csv", b"x,y\n1,2\n", "text/csv")}))
     assert ev[-1]["event"] == "error" and ev[-1]["stage"] == "validate"
-    assert "Missing required columns" in ev[-1]["message"]
+    assert "at least 50" in ev[-1]["message"]  # 'x,y' headers are accepted now; one data row is still too few
     assert not any(e["event"] == "result" for e in ev)
     r = post_full({"file": ("bad.csv", b"x,y\n1,2\n", "text/csv")}, {"stream": "false"})
     assert r.status_code == 422
@@ -171,9 +171,12 @@ def test_html_report_is_a_concise_brief(single):
     resp = client.post("/api/full-report/html", json=r)
     assert resp.status_code == 200
     html = resp.text
-    for h in ("Summary of findings", "Figure 1", "Table 1", "Table 2", "Reliability", "Conclusion and recommendations", "Methods."):
+    for h in ("How sure are we?", "How close were the candidates?", "Checks we ran", "What this means", "What to do next",
+              "Technical details", "Principal peaks", "Reliability notes", "Methods."):
         assert h in html
-    assert r["brief"]["headline"] in html and r["brief"]["report_id"] in html
+    assert html.index("How sure are we?") < html.index("Technical details")  # the picture-first summary comes first
+    assert r["explanation"]["headline"] in html and r["brief"]["report_id"] in html
+    assert html.count("<svg") == 2  # the overlay figure and the technical spectrum
     assert "Not performed:" in html and "requires a labelled training dataset" in html
     assert "not a probability" in html.lower() and "synthetic" in html.lower()
     assert "<svg" in html and "@media print" in html
@@ -199,7 +202,8 @@ def test_brief_never_claims_a_match_when_inconclusive():
     assert "No reliable match" in b["headline"]
     assert any("likely noise" in f for f in b["findings"])
     assert "signal-to-noise" in b["limitations"][0].lower()
-    assert "✓" not in report_html.build(r)
+    html = report_html.build(r)
+    assert "No clear match" in html and "Match found" not in html
 
 
 def test_html_report_escapes_user_text():

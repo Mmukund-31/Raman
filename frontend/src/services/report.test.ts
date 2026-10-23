@@ -114,7 +114,7 @@ describe('paced display', () => {
   const server = (st: StageState['status'][]) => INITIAL_STAGES.map((s, i) => ({ ...s, status: st[i] ?? 'pending' }))
   it('trails the server but never shows a step as done or started before the server has', () => {
     const s = server(['done', 'done', 'done', 'running'])
-    expect(paced(s, 0).map(x => x.status)).toEqual(['running', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending'])
+    expect(paced(s, 0).map(x => x.status)).toEqual(['running', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending'])
     expect(paced(s, 2).map(x => x.status).slice(0, 4)).toEqual(['done', 'done', 'running', 'pending'])
     expect(paced(s, 4).map(x => x.status).slice(0, 5)).toEqual(['done', 'done', 'done', 'running', 'pending'])
     expect(paced(server([]), 0)[0].status).toBe('pending')

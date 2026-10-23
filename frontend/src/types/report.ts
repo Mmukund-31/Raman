@@ -65,6 +65,27 @@ export interface Brief {
   limitations: string[]; recommendations: string[]; not_performed: { title: string; reason: string }[]; methods: string
 }
 
+export interface EvidenceFact { id: string; label: string; text: string; section: string }
+export interface Explanation {
+  source: 'llm_verified' | 'rule_based'; headline: string; what_we_found: { text: string; evidence: string[] }[]
+  how_sure: string; what_this_does_not_mean: string[]; next_steps: string[]; glossary: { term: string; plain: string }[]
+  evidence: EvidenceFact[]; note: string; model?: string; llm_status?: string
+}
+export interface VisualSummary {
+  confidence: { level: 0 | 1 | 2 | 3; label: string; reason: string }
+  overlay: {
+    x: number[]; sample: number[]; reference: { x: number[]; y: number[] } | null; reference_name: string | null
+    reference_category?: string; peaks: number[]; peak_heights: number[]
+  }
+  candidates: { items: { name: string; score: number; category?: string; top: boolean }[]; threshold: number; named: boolean }
+  checks: { id: string; label: string; passed: boolean; detail: string }[]
+}
+export interface EvaluationSummary {
+  headline: string | null; date: string; n_materials: number; n_reference_spectra: number
+  clean: { n: number; answered_fraction: number; accuracy_when_answered: number | null }
+  negative_control: { n: number; false_match_rate: number }
+}
+
 export interface FullReport {
   report_version: string; software_version: string; generated_at: string; sample_id: string; source: string; brief: Brief
   declared_origin: Origin; data_provenance: Provenance & { sample: { declared_origin?: string } }; is_diagnostic: false
@@ -79,6 +100,9 @@ export interface FullReport {
     benchmark: Section<Record<string, number>>; translation: Section<Record<string, never>>; quality: Section<QualityData>
   }
   conclusion: { meaning: string[]; does_not_prove: string[]; next_steps: string[] }
+  explanation?: Explanation
+  evaluation?: EvaluationSummary | null
+  visual?: VisualSummary
 }
 
 export type Origin = 'unknown' | 'measured' | 'synthetic'

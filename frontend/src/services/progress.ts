@@ -4,13 +4,14 @@ export interface StageState { id: string; label: string; status: StageStatus; de
 
 /** Mirrors backend orchestrator.STAGES so the list is visible before the first event; server labels replace these. */
 export const INITIAL_STAGES: StageState[] = [
-  ['validate', 'Validating CSV'],
+  ['validate', 'Reading and validating the file'],
   ['process', 'Processing spectrum, detecting peaks and matching references'],
   ['conditions', 'Reviewing experimental conditions'],
   ['sensitivity', 'Running wavenumber sensitivity tests'],
   ['pca', 'Comparing spectra with PCA'],
   ['models', 'Checking model benchmark and translation requirements'],
   ['report', 'Assembling the final report'],
+  ['explain', 'Writing the plain-language summary'],
 ].map(([id, label]) => ({ id, label, status: 'pending' as const }))
 
 /** Applies one server event. A stage only changes state when the server says so; nothing is advanced on a timer. */

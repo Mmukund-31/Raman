@@ -8,12 +8,14 @@ import { Analyze } from './Analyze'
 vi.mock('../components/report/Figure', () => ({ Figure: ({ label }: { label: string }) => <div data-testid="figure">{label}</div> }))
 
 const examples = [{ sample_id: 'demo_paracetamol_synthetic', description: 'Paracetamol-like bands', category: 'synthetic' }]
+const testFiles = [{ id: 'calcite_json', file: 'calcite.json', description: 'Calcite as JSON arrays.', tests: ['JSON'], source: 'derived', license: 'RRUFF', size_bytes: 10, expected: { expect: 'match', material: 'calcite' } }]
 const full = (): ProgressEvent[] => [...stageEvents(), { event: 'result', report: reportFixture() }]
 
 function mockServer(...analyses: (() => Response)[]) {
   const queue = [...analyses]
   const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
     if (String(url).endsWith('/api/examples')) return new Response(JSON.stringify(examples))
+    if (String(url).endsWith('/api/test-files')) return new Response(JSON.stringify(testFiles))
     const next = queue.shift()
     if (!next) throw new Error('unexpected request')
     return next()
@@ -22,7 +24,7 @@ function mockServer(...analyses: (() => Response)[]) {
   return fetchMock
 }
 
-const upload = (name = 'sample.csv') => fireEvent.change(screen.getByLabelText('Spectrum CSV file'),
+const upload = (name = 'sample.csv') => fireEvent.change(screen.getByLabelText('Spectrum file'),
   { target: { files: [new File(['raman_shift_cm1,intensity\n'], name, { type: 'text/csv' })] } })
 /** Advance fake time in small steps so React can re-render and schedule the next paced step in between. */
 async function tick(ms: number) {
@@ -51,12 +53,12 @@ describe('Analyze workflow', () => {
     render(<Analyze />)
     upload()
     await tick(50)
-    expect(statuses()).toEqual(['running', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending'])
+    expect(statuses()).toEqual(['running', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending', 'pending'])
     await tick(STEP_MS * 3)
     expect(statuses().slice(0, 4)).toEqual(['done', 'done', 'done', 'running'])
-    expect(screen.queryByRole('heading', { name: 'Raman Spectral Analysis' })).toBeNull()
-    await tick(STEP_MS * 4 + 500)
-    expect(screen.getByRole('heading', { name: 'Raman Spectral Analysis' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Spectrum analysis report' })).toBeNull()
+    await tick(STEP_MS * 5 + 500)
+    expect(screen.getByRole('heading', { name: 'Spectrum analysis report' })).toBeTruthy()
   })
 
   it('never shows a step finished before the server has finished it', async () => {
@@ -66,11 +68,11 @@ describe('Analyze workflow', () => {
     render(<Analyze />)
     upload()
     await tick(STEP_MS * 10)
-    expect(statuses()).toEqual(['done', 'done', 'done', 'running', 'pending', 'pending', 'pending'])
-    expect(screen.queryByRole('heading', { name: 'Raman Spectral Analysis' })).toBeNull()
+    expect(statuses()).toEqual(['done', 'done', 'done', 'running', 'pending', 'pending', 'pending', 'pending'])
+    expect(screen.queryByRole('heading', { name: 'Spectrum analysis report' })).toBeNull()
     release()
-    await tick(STEP_MS * 5)
-    expect(screen.getByRole('heading', { name: 'Raman Spectral Analysis' })).toBeTruthy()
+    await tick(STEP_MS * 6)
+    expect(screen.getByRole('heading', { name: 'Spectrum analysis report' })).toBeTruthy()
   })
 
   it('shows a clear error and retries', async () => {
@@ -80,8 +82,8 @@ describe('Analyze workflow', () => {
     upload()
     expect((await screen.findByRole('alert')).textContent).toContain('Missing required columns')
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-    await tick(STEP_MS * 8 + 500)
-    expect(screen.getByRole('heading', { name: 'Raman Spectral Analysis' })).toBeTruthy()
+    await tick(STEP_MS * 9 + 500)
+    expect(screen.getByRole('heading', { name: 'Spectrum analysis report' })).toBeTruthy()
     expect(fetchMock.mock.calls.filter(c => String(c[0]).includes('/api/full-report'))).toHaveLength(2)
   })
 
@@ -94,17 +96,25 @@ describe('Analyze workflow', () => {
     expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull()
     fireEvent.change(screen.getByPlaceholderText('e.g. 785 nm'), { target: { value: '785' } })
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
-    await tick(STEP_MS * 8 + 500)
+    await tick(STEP_MS * 9 + 500)
     const body = fetchMock.mock.calls.filter(c => String(c[0]).includes('/api/full-report'))[1][1] as RequestInit
     expect((body.body as FormData).get('excitation_nm')).toBe('785')
+  })
+
+  it('lists downloadable test files with their expected result', async () => {
+    mockServer()
+    render(<Analyze />)
+    expect(await screen.findByText('calcite.json')).toBeTruthy()
+    expect(screen.getByText('Expected: calcite')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Download all (zip)' }).getAttribute('href')).toContain('/api/test-files/all.zip')
   })
 
   it('runs a bundled sample with one click', async () => {
     const fetchMock = mockServer(() => ndjsonResponse(full()))
     render(<Analyze />)
     fireEvent.click(await screen.findByRole('button', { name: 'paracetamol' }))
-    await tick(STEP_MS * 8 + 500)
-    expect(screen.getByRole('heading', { name: 'Raman Spectral Analysis' })).toBeTruthy()
+    await tick(STEP_MS * 9 + 500)
+    expect(screen.getByRole('heading', { name: 'Spectrum analysis report' })).toBeTruthy()
     expect(fetchMock.mock.calls.some(c => String(c[0]).includes('/api/full-report/example/demo_paracetamol_synthetic'))).toBe(true)
   })
 })

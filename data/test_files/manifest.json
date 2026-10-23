@@ -1,0 +1,576 @@
+[
+ {
+  "id": "rruff_calcite_raw",
+  "file": "rruff_calcite_raw.txt",
+  "description": "Unmodified RRUFF RAW export of a calcite specimen, with the instrument background. Raw data are harder: calcite or a cautious 'inconclusive' are both acceptable.",
+  "tests": [
+   "RRUFF ## header",
+   "raw background",
+   "metadata extraction"
+  ],
+  "expected": {
+   "expect": "any",
+   "allowed": [
+    "calcite",
+    "inconclusive"
+   ]
+  },
+  "source": "RRUFF R150075 (Calcite__R150075__Raman__780______Raman_Data_RAW__9702a7a46e69e7e2ede82c463ab1.txt)",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 74713
+ },
+ {
+  "id": "rruff_calcite_processed",
+  "file": "rruff_calcite_processed.txt",
+  "description": "Unmodified RRUFF processed spectrum of calcite.",
+  "tests": [
+   "RRUFF ## header"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "RRUFF R150075 (Calcite__R150075__Raman__780______Raman_Data_Processed__17f568a972108e0cc0dcf206f80c.txt)",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 50133
+ },
+ {
+  "id": "rruff_quartz_processed",
+  "file": "rruff_quartz_processed.txt",
+  "description": "Unmodified RRUFF processed spectrum of quartz.",
+  "tests": [
+   "RRUFF ## header"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "quartz"
+  },
+  "source": "RRUFF (Quartz__R100134__Raman__532______Raman_Data_Processed__d909e2d836abdf8e8d1646da7bb5.txt)",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 48492
+ },
+ {
+  "id": "rod_entry",
+  "file": "rod_magnetite.rod",
+  "description": "Unmodified Raman Open Database entry (Magnetite) from a different laboratory than the reference. Band positions can differ between labs by more than the peak tolerance, so the material or a cautious 'inconclusive' are both acceptable.",
+  "tests": [
+   "ROD CIF format",
+   "excitation from file"
+  ],
+  "expected": {
+   "expect": "any",
+   "allowed": [
+    "magnetite",
+    "inconclusive"
+   ]
+  },
+  "source": "ROD 1000000",
+  "license": "Raman Open Database: public domain. Cite El Mendili et al. (2019) J. Appl. Cryst. 52, 618-625.",
+  "size_bytes": 13029
+ },
+ {
+  "id": "calcite_jcamp",
+  "file": "calcite.jdx",
+  "description": "Calcite as JCAMP-DX 5.01 (AFFN X++(Y..Y)).",
+  "tests": [
+   "JCAMP-DX"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived from RRUFF R150075",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 16680
+ },
+ {
+  "id": "quartz_tsv_units",
+  "file": "quartz_tab_units.tsv",
+  "description": "Quartz as tab-separated text with units in the header.",
+  "tests": [
+   "tab delimiter",
+   "header with units"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "quartz"
+  },
+  "source": "derived from Quartz__R100134__Raman__532______Raman_Data_Processed__d909e2d836abdf8e8d1646da7bb5.txt",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 35681
+ },
+ {
+  "id": "corundum_european_csv",
+  "file": "corundum_european.csv",
+  "description": "Corundum as a European CSV: semicolon separator, decimal commas, German header.",
+  "tests": [
+   "semicolon delimiter",
+   "decimal comma",
+   "non-English header"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "corundum"
+  },
+  "source": "derived from Corundum__R060020__Raman__532______Raman_Data_Processed__8e00ce9cc8a9a0ae2f9b0dc1ebf1.txt",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 34252
+ },
+ {
+  "id": "rutile_headerless",
+  "file": "rutile_headerless.txt",
+  "description": "Rutile as headerless whitespace-separated columns.",
+  "tests": [
+   "no header",
+   "whitespace delimiter"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "rutile"
+  },
+  "source": "derived from Rutile__R050031__Raman__532______Raman_Data_Processed__b62729c945757b082c20d3e47128.txt",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 63531
+ },
+ {
+  "id": "dolomite_descending",
+  "file": "dolomite_descending.csv",
+  "description": "Dolomite with the axis stored high-to-low.",
+  "tests": [
+   "descending axis"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "dolomite"
+  },
+  "source": "derived from Dolomite__R040030__Raman__532______Raman_Data_Processed__ce44c2c1f3929bbee5c86d17f314.txt",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 35874
+ },
+ {
+  "id": "calcite_wavelength_532",
+  "file": "calcite_wavelength_532nm.csv",
+  "description": "Calcite with the x-axis as absolute wavelength (nm) for a 532 nm laser. Enter 532 nm as the excitation wavelength when uploading.",
+  "tests": [
+   "wavelength axis",
+   "needs excitation"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived from RRUFF R150075",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 41016,
+  "excitation_nm": 532
+ },
+ {
+  "id": "calcite_wavelength_785",
+  "file": "calcite_wavelength_785nm.csv",
+  "description": "Calcite with the x-axis as absolute wavelength (nm) for a 785 nm laser. Enter 785 nm as the excitation wavelength when uploading.",
+  "tests": [
+   "wavelength axis",
+   "needs excitation"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived from RRUFF R150075",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 41016,
+  "excitation_nm": 785
+ },
+ {
+  "id": "calcite_wavelength_no_excitation",
+  "file": "calcite_wavelength_missing_laser.csv",
+  "description": "Wavelength axis uploaded without an excitation wavelength.",
+  "tests": [
+   "error message: missing excitation"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "excitation"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 41016
+ },
+ {
+  "id": "hematite_instrument_preamble",
+  "file": "hematite_instrument_export.txt",
+  "description": "Hematite with an instrument metadata preamble and a footer line.",
+  "tests": [
+   "metadata preamble",
+   "footer",
+   "excitation read from file",
+   "laser power not mistaken for wavelength"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "hematite"
+  },
+  "source": "derived from Hematite__R060190__Raman__785______Raman_Data_Processed__50f59fe2564ec1919574cf0848ad.txt",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 34519
+ },
+ {
+  "id": "calcite_absolute_wavenumber",
+  "file": "calcite_absolute_wavenumber.csv",
+  "description": "Calcite stored as absolute wavenumbers (cm⁻¹); the 532 nm laser is noted in the file.",
+  "tests": [
+   "absolute wavenumber axis"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 41049
+ },
+ {
+  "id": "quartz_replicates_columns",
+  "file": "quartz_3_replicates_columns.csv",
+  "description": "Three quartz replicates as columns; the extra columns become additional spectra (enables PCA).",
+  "tests": [
+   "multi-column",
+   "PCA"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "quartz"
+  },
+  "source": "derived (replicate noise added)",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 71566
+ },
+ {
+  "id": "quartz_replicates_rows",
+  "file": "quartz_3_replicates_rows.csv",
+  "description": "Three quartz replicates stored one spectrum per row, axis in the first row (common in ML datasets).",
+  "tests": [
+   "row-wise matrix"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "quartz"
+  },
+  "source": "derived (replicate noise added)",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 71532
+ },
+ {
+  "id": "calcite_fluorescence",
+  "file": "calcite_strong_fluorescence.csv",
+  "description": "Calcite on a fluorescence background three times stronger than the Raman bands.",
+  "tests": [
+   "baseline correction"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 45065
+ },
+ {
+  "id": "corundum_cosmic_rays",
+  "file": "corundum_cosmic_rays.csv",
+  "description": "Corundum with six cosmic-ray spikes (1 point wide, 2-5x the strongest band).",
+  "tests": [
+   "despiking"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "corundum"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 34256
+ },
+ {
+  "id": "calcite_very_noisy",
+  "file": "calcite_very_noisy.csv",
+  "description": "Calcite buried in noise (noise sigma = 60% of the band height).",
+  "tests": [
+   "low SNR -> inconclusive"
+  ],
+  "expected": {
+   "expect": "inconclusive"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 44277
+ },
+ {
+  "id": "quartz_narrow_window",
+  "file": "quartz_narrow_window.csv",
+  "description": "Only 420-500 cm⁻¹ of a quartz spectrum.",
+  "tests": [
+   "low coverage -> inconclusive"
+  ],
+  "expected": {
+   "expect": "inconclusive"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 2679
+ },
+ {
+  "id": "mixture_calcite_quartz",
+  "file": "mixture_calcite_quartz.csv",
+  "description": "50:50 sum of calcite and quartz spectra. A single-reference matcher cannot name a mixture; either component or 'inconclusive' is acceptable.",
+  "tests": [
+   "mixture"
+  ],
+  "expected": {
+   "expect": "any",
+   "allowed": [
+    "calcite",
+    "quartz",
+    "inconclusive"
+   ]
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 35185
+ },
+ {
+  "id": "calcite_axis_offset",
+  "file": "calcite_axis_offset_8cm.csv",
+  "description": "Calcite with an 8 cm⁻¹ calibration error.",
+  "tests": [
+   "calibration offset"
+  ],
+  "expected": {
+   "expect": "any",
+   "allowed": [
+    "calcite",
+    "inconclusive"
+   ]
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 36686
+ },
+ {
+  "id": "calcite_saturated",
+  "file": "calcite_saturated.csv",
+  "description": "Calcite with the detector saturated: the strongest band is clipped flat.",
+  "tests": [
+   "saturation warning"
+  ],
+  "expected": {
+   "expect": "any",
+   "allowed": [
+    "calcite",
+    "inconclusive"
+   ],
+   "warning_contains": "saturated"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 36651
+ },
+ {
+  "id": "calcite_missing_values",
+  "file": "calcite_missing_values.csv",
+  "description": "Calcite with six empty cells and negative intensities (background-subtracted export).",
+  "tests": [
+   "missing values dropped",
+   "negative intensities"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 37685
+ },
+ {
+  "id": "calcite_json",
+  "file": "calcite.json",
+  "description": "Calcite as JSON arrays.",
+  "tests": [
+   "JSON"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 38642
+ },
+ {
+  "id": "calcite_utf16",
+  "file": "calcite_windows_utf16.txt",
+  "description": "Calcite exported as UTF-16 text with Windows line endings (some Windows instrument software).",
+  "tests": [
+   "UTF-16 encoding"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "calcite"
+  },
+  "source": "derived",
+  "license": "RRUFF data, free for research use with citation: Lafuente et al. (2015), The power of databases: the RRUFF project.",
+  "size_bytes": 78250
+ },
+ {
+  "id": "not_in_library",
+  "file": "unknown_epidote.rod",
+  "description": "Epidote: a real mineral that is not in the reference library. The honest answer is 'inconclusive', not the nearest wrong mineral.",
+  "tests": [
+   "material outside the library"
+  ],
+  "expected": {
+   "expect": "inconclusive"
+  },
+  "source": "ROD 1000127",
+  "license": "Raman Open Database: public domain. Cite El Mendili et al. (2019) J. Appl. Cryst. 52, 618-625.",
+  "size_bytes": 48512,
+  "true_material": "epidote"
+ },
+ {
+  "id": "synthetic_paracetamol",
+  "file": "synthetic_paracetamol.csv",
+  "description": "SYNTHETIC paracetamol bands (European CSV), not a measurement.",
+  "tests": [
+   "synthetic organic"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "paracetamol"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 33498,
+  "synthetic": true
+ },
+ {
+  "id": "synthetic_ethanol",
+  "file": "synthetic_ethanol.tsv",
+  "description": "SYNTHETIC ethanol bands (TSV), not a measurement.",
+  "tests": [
+   "synthetic organic"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "ethanol"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 33496,
+  "synthetic": true
+ },
+ {
+  "id": "synthetic_polypropylene",
+  "file": "synthetic_polypropylene.csv",
+  "description": "SYNTHETIC polypropylene bands (CSV, 1.5 cm⁻¹ step), not a measurement.",
+  "tests": [
+   "synthetic organic"
+  ],
+  "expected": {
+   "expect": "match",
+   "material": "polypropylene"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 33513,
+  "synthetic": true
+ },
+ {
+  "id": "invalid_spc_binary",
+  "file": "vendor_binary.spc",
+  "description": "A binary vendor file (.spc).",
+  "tests": [
+   "binary rejected"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "Export"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 604
+ },
+ {
+  "id": "invalid_xlsx",
+  "file": "workbook.xlsx",
+  "description": "An Excel workbook.",
+  "tests": [
+   "Excel rejected"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "Excel"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 204
+ },
+ {
+  "id": "invalid_empty",
+  "file": "empty.csv",
+  "description": "An empty file.",
+  "tests": [
+   "empty"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "empty"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 0
+ },
+ {
+  "id": "invalid_single_column",
+  "file": "single_column.txt",
+  "description": "Intensities only, no x column.",
+  "tests": [
+   "single column"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "one column"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 2154
+ },
+ {
+  "id": "invalid_too_short",
+  "file": "too_short.csv",
+  "description": "Only 20 points.",
+  "tests": [
+   "too few points"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "at least"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 301
+ },
+ {
+  "id": "invalid_text",
+  "file": "notes.txt",
+  "description": "Plain text with no data.",
+  "tests": [
+   "no numeric data"
+  ],
+  "expected": {
+   "expect": "error",
+   "message_contains": "numeric"
+  },
+  "source": "synthetic",
+  "license": "Generated by RamanReach (synthetic); free to reuse.",
+  "size_bytes": 57
+ }
+]

@@ -6,7 +6,8 @@ from pydantic import BaseModel, Field
 
 from .services import (dataset_builder, experiment_conditions, insight_generation as ig, model_benchmark, pca_analysis,
                        perturbations, pipeline, reporting, spectral_translation, wavenumber_sensitivity)
-from .services.validation import ValidationError, parse_csv
+from .services.formats import parse_any
+from .services.validation import ValidationError
 
 router = APIRouter(prefix="/api")
 
@@ -129,7 +130,7 @@ def _load(ref: SpectrumRef):
         return x, y, ref.example_id, guess if guess in refs else None, "synthetic_example"
     if ref.csv_text:
         try:
-            s = parse_csv(ref.csv_text.encode(), ref.excitation_nm)
+            s = parse_any(ref.csv_text.encode(), None, ref.excitation_nm)
         except ValidationError as e:
             _fail(e)
         return s.x, s.y, "uploaded", None, "measured"

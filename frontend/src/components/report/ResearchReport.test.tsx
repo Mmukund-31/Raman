@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { reportFixture } from '../../test/helpers'
 import { ResearchReport } from './ResearchReport'
@@ -7,32 +7,56 @@ vi.mock('./Figure', () => ({ Figure: ({ label }: { label: string }) => <div data
 afterEach(cleanup)
 
 describe('ResearchReport', () => {
-  it('presents a concise research report built from the brief', () => {
+  it('leads with a short, picture-first answer', () => {
     const r = reportFixture()
     render(<ResearchReport r={r} onNew={() => {}} />)
-    expect(screen.getByRole('heading', { name: 'Raman Spectral Analysis' })).toBeTruthy()
-    expect(screen.getAllByText(r.brief.headline).length).toBeGreaterThan(0)
-    for (const h of ['Summary of findings', 'Reliability', 'Figure 1 · Processed spectrum', 'Table 1 · Principal peaks', 'Table 2 · Reference comparison', 'Conclusion and recommendations'])
+    expect(screen.getByRole('heading', { name: 'Spectrum analysis report' })).toBeTruthy()
+    const answer = screen.getByRole('region', { name: 'Answer' })
+    expect(answer.textContent).toContain(r.explanation!.headline)
+    for (const h of [`Your spectrum next to ${r.visual!.overlay.reference_name}`, 'How close were the candidates?', 'Checks we ran', 'What this means', 'What to do next'])
       expect(screen.getByRole('heading', { name: h })).toBeTruthy()
-    for (const m of r.brief.metrics) expect(screen.getByText(m.label)).toBeTruthy()
-    expect(screen.getAllByTestId('figure')).toHaveLength(1)
-    expect(screen.getAllByRole('row')).toHaveLength(r.brief.peaks.length + 1)
+    expect(screen.getAllByTestId('figure')[0].textContent).toContain('overlaid on the best-matching reference')
   })
 
-  it('states the limits and the analyses that were not performed', () => {
+  it('draws one bar per candidate and one line per check, each readable without colour', () => {
     const r = reportFixture()
     render(<ResearchReport r={r} onNew={() => {}} />)
-    expect(screen.getByText(/Not a probability of identity/)).toBeTruthy()
-    expect(screen.getByText(/Not performed:/).parentElement?.textContent).toContain('requires a labelled training dataset')
-    for (const l of r.brief.limitations) expect(screen.getByText(l)).toBeTruthy()
+    for (const c of r.visual!.candidates.items) expect(screen.getAllByText(c.score.toFixed(2)).length).toBeGreaterThan(0)
+    const checks = screen.getByRole('heading', { name: 'Checks we ran' }).parentElement!
+    expect(within(checks).getAllByRole('listitem')).toHaveLength(r.visual!.checks.length)
+    for (const c of r.visual!.checks) expect(within(checks).getByText(c.label).parentElement!.textContent).toContain(c.passed ? 'passed' : 'not passed')
   })
 
-  it('shows an inconclusive verdict without claiming a match', () => {
+  it('shows the confidence meter, or a demo notice for simulated references', () => {
     const r = reportFixture()
-    r.brief = { ...r.brief, verdict: 'Inconclusive', match_claimed: false, headline: 'No reliable match to the reference library could be established.' }
+    r.visual!.confidence = { level: 3, label: 'Confident', reason: 'A very close match.' }
     render(<ResearchReport r={r} onNew={() => {}} />)
-    expect(screen.getByRole('status').textContent).toContain('Inconclusive')
-    expect(screen.getByText(/does not meet the criteria for a match claim/)).toBeTruthy()
+    expect(screen.getByRole('meter', { name: 'Confidence' }).getAttribute('aria-valuetext')).toBe('Confident')
+    expect(screen.getByText('Match found')).toBeTruthy()
+    cleanup()
+    const d = reportFixture()
+    render(<ResearchReport r={d} onNew={() => {}} />)
+    expect(screen.getByText('Demo result')).toBeTruthy()
+    expect(screen.queryByRole('meter')).toBeNull()
+  })
+
+  it('says plainly when nothing can be named', () => {
+    const r = reportFixture()
+    r.visual!.confidence = { level: 0, label: "Can't tell", reason: 'Not all checks passed.' }
+    r.visual!.candidates.named = false
+    render(<ResearchReport r={r} onNew={() => {}} />)
+    expect(screen.getByText('No clear match')).toBeTruthy()
+    expect(screen.getByRole('meter', { name: 'Confidence' }).getAttribute('aria-valuetext')).toBe("Can't tell")
+  })
+
+  it('keeps the specialist material behind Technical details', () => {
+    const r = reportFixture()
+    render(<ResearchReport r={r} onNew={() => {}} />)
+    const tech = screen.getByText('Technical details').closest('details')!
+    expect(tech.open).toBe(false)
+    expect(tech.textContent).toContain('Principal peaks')
+    expect(tech.textContent).toContain('requires a labelled training dataset')
+    for (const l of r.brief.limitations) expect(tech.textContent).toContain(l)
   })
 
   it('exports data and starts a new analysis', () => {

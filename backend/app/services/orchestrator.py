@@ -9,22 +9,25 @@ from datetime import datetime, timezone
 
 import numpy as np
 
-from . import dataset_builder, experiment_conditions as ec, insight_generation as ig, matching, pca_analysis, pipeline, quality
+from . import dataset_builder, evaluation_real, experiment_conditions as ec, insight_generation as ig, matching
+from . import pca_analysis, pipeline, quality, visual
 from . import wavenumber_sensitivity as ws
-from .validation import ValidationError, parse_csv
+from .formats import parse_any
+from .validation import ValidationError
 
 REPORT_VERSION = "1.0"
 COMPLETE, PARTIAL, INSUFFICIENT, ERROR = "complete", "partial", "insufficient_data", "error"
 MAX_EXTRAS = 10
 PCA_MIN_SPECTRA = 3  # run_pca's own minimum; below MIN_SPECTRA_WARN it adds its own reliability warning
 STAGES = [
-    ("validate", "Validating CSV"),
+    ("validate", "Reading and validating the file"),
     ("process", "Processing spectrum, detecting peaks and matching references"),
     ("conditions", "Reviewing experimental conditions"),
     ("sensitivity", "Running wavenumber sensitivity tests"),
     ("pca", "Comparing spectra with PCA"),
     ("models", "Checking model benchmark and translation requirements"),
     ("report", "Assembling the final report"),
+    ("explain", "Writing the plain-language summary"),
 ]
 ORIGINS = {
     "measured": ("measured", "Declared by the user as a real instrument measurement; origin and calibration not verified."),
@@ -95,8 +98,9 @@ def _validation_section(spec, extras_ok, extras_failed):
             "coordinate_input": spec.coordinate_input, "converted_from_wavelength": spec.converted,
             "warnings": spec.warnings, "additional_spectra": [{"name": e["name"], "points": int(e["x"].size),
                                                                "range_cm1": [float(e["x"][0]), float(e["x"][-1])]} for e in extras_ok],
-            "rejected_additional_spectra": extras_failed}
-    summary = (f"The CSV passed validation: {spec.x.size} points from {spec.x[0]:.0f} to {spec.x[-1]:.0f} cm⁻¹ "
+            "rejected_additional_spectra": extras_failed, "file_metadata": spec.meta}
+    fmt = spec.meta.get("format")
+    summary = (f"The file{f' ({fmt})' if fmt else ''} passed validation: {spec.x.size} points from {spec.x[0]:.0f} to {spec.x[-1]:.0f} cm⁻¹ "
                f"(median spacing {step:.2g} cm⁻¹).")
     if extras_failed:
         summary += f" {len(extras_failed)} additional file(s) were rejected and left out."
@@ -201,7 +205,7 @@ def _pca_section(primary, extras, options, primary_label):
         return _section("PCA", INSUFFICIENT, "Insufficient data: PCA needs several spectra to compare.",
                         reason=f"PCA describes variation across a set of spectra. {n} spectrum/spectra were provided; at least "
                                f"{PCA_MIN_SPECTRA} are required, and {pca_analysis.MIN_SPECTRA_WARN}+ for stable structure.",
-                        requirements=["Upload additional spectra (replicates, related samples or other conditions) with the main CSV.",
+                        requirements=["Upload additional spectra (replicates, related samples or other conditions) with the main file.",
                                       "Optionally label each spectrum so group structure can be assessed."])
     spectra = [(primary["x"], primary["y"])] + [(e["x"], e["y"]) for e in extras]
     names = [primary["name"]] + [e["name"] for e in extras]
@@ -306,20 +310,22 @@ def _summary_and_conclusion(a, sections, n_spectra):
     if synth_refs:
         not_prove.insert(0, "Matching against a synthetic library cannot identify a real material.")
     nxt = []
+    if a.get("mixture"):
+        nxt.append("If the sample may be a mixture, measure a few different spots on it separately.")
     snr = a["snr"]
     if snr is None or snr < quality.MIN_SNR:
-        nxt.append("Improve signal-to-noise: longer exposure, more accumulations, or check focus and laser power.")
+        nxt.append("Measure again with a stronger signal: a longer exposure, more repeats, or better focus.")
     if a["matches"] and a["matches"][0]["coverage"] < quality.MIN_COVERAGE:
-        nxt.append("Measure a wider Raman-shift range so it overlaps the reference spectra.")
+        nxt.append("Measure a wider range so it overlaps the reference spectra.")
     if any(p["near_boundary"] for p in a["peaks"]):
-        nxt.append("Extend the measured range: some peaks sit at the edge and may be cut off.")
+        nxt.append("Measure a slightly wider range: some peaks sit at the edge and may be cut off.")
     missing = sections["conditions"]["data"]["missing"]
     if missing:
-        nxt.append("Record the missing acquisition conditions (" + ", ".join(METADATA_LABELS[k][0].lower() for k in missing[:4])
-                   + ("…" if len(missing) > 4 else "") + ") so results can be reproduced.")
-    nxt.append("Verify wavenumber calibration with a standard (e.g. the silicon band near 520.7 cm⁻¹) measured in the same session.")
+        nxt.append("Write down how the spectrum was measured (" + ", ".join(METADATA_LABELS[k][0].lower() for k in missing[:3])
+                   + ("…" if len(missing) > 3 else "") + ") so the result can be repeated.")
+    nxt.append("Check the instrument's calibration with a silicon wafer in the same session: its peak should sit at 520.7 cm⁻¹.")
     if synth_refs:
-        nxt.append("Compare against a validated reference library measured on comparable instruments.")
+        nxt.append("Compare against measured reference spectra, not simulated ones.")
     for k in ("pca", "benchmark", "translation"):
         if sections[k]["status"] == INSUFFICIENT and sections[k]["requirements"]:
             req = sections[k]["requirements"][0]
@@ -373,7 +379,7 @@ def _brief(a, sections, conclusion, now):
     if a["data_provenance"]["sample"].get("category") == "synthetic":
         limitations.append("Input spectrum is synthetic test data, not a measurement.")
     limitations.append("Wavenumber calibration of the source instrument is not verified.")
-    recs = [s for s in conclusion["next_steps"] if not s.startswith(("To enable", "Record the missing"))][:3]
+    recs = [s for s in conclusion["next_steps"] if not s.startswith(("To enable", "Write down how"))][:3]
     return {
         "report_id": f"RR-{now:%Y%m%d-%H%M%S}",
         "verdict": "Provisional match" if ok else "Inconclusive",
@@ -419,8 +425,9 @@ def _parse_extras(extras, excitation_nm):
     ok, failed = [], []
     for e in extras[:MAX_EXTRAS]:
         try:
-            s = parse_csv(e["raw"], excitation_nm)
+            s = parse_any(e["raw"], e.get("filename") or e["name"], excitation_nm)
             ok.append({"name": e["name"], "label": e.get("label"), "x": s.x, "y": s.y})
+            ok.extend({"name": f"{e['name']} / {c['name']}"[:80], "label": e.get("label"), "x": s.x, "y": c["y"]} for c in s.extra_y)
         except ValidationError as err:
             failed.append({"name": e["name"], "error": str(err)})
     for e in extras[MAX_EXTRAS:]:
@@ -428,70 +435,68 @@ def _parse_extras(extras, excitation_nm):
     return ok, failed
 
 
-def run(raw: bytes, sample_id="uploaded", source="uploaded file", excitation_nm=None, options=None, metadata=None,
-        extras=(), origin="unknown", provenance=None, truth=None, primary_label=None):
-    """Yields {"event": "stage", ...} as each stage starts and ends, then {"event": "result", "report": ...}.
-    A fatal problem (invalid main CSV or metadata) yields {"event": "error", ...} and stops."""
-    total = len(STAGES)
-    labels = dict(STAGES)
-    opts = {"baseline": True, "als_lambda": 1e5, "als_p": 0.01, "smooth": True, "window": 11, "poly": 3,
-            "normalize": "vector", "prominence": 0.05}
-    opts.update(options or {})
-    state = {"done": 0}
+class Run:
+    """Shared state of one analysis. Each stage function reads and fills it; run_linear() and the LangGraph workflow
+    (app.agent.graph) both drive the same stage functions, so they produce identical reports and events."""
 
-    def start(sid):
-        return {"event": "stage", "stage": sid, "label": labels[sid], "status": "running", "completed": state["done"], "total": total}
+    def __init__(self, raw, sample_id="uploaded", source="uploaded file", excitation_nm=None, options=None, metadata=None,
+                 extras=(), origin="unknown", provenance=None, truth=None, primary_label=None, filename=None):
+        self.raw, self.sample_id, self.source, self.excitation_nm = raw, sample_id, source, excitation_nm
+        self.opts = {"baseline": True, "als_lambda": 1e5, "als_p": 0.01, "smooth": True, "window": 11, "poly": 3,
+                     "normalize": "vector", "prominence": 0.05, "despike": True}
+        self.opts.update(options or {})
+        self.metadata, self.extras = metadata, list(extras)
+        self.origin = origin if origin in ORIGINS else "unknown"
+        self.provenance, self.truth, self.primary_label, self.filename = provenance, truth, primary_label, filename
+        self.sections, self.report = {}, None
+        self.done = 0
 
-    def end(sid, status="done", detail=None):
-        state["done"] += 1
-        return {"event": "stage", "stage": sid, "label": labels[sid], "status": status, "detail": detail,
-                "completed": state["done"], "total": total}
 
-    # 1. validation (fatal on failure)
-    yield start("validate")
-    if origin not in ORIGINS:
-        origin = "unknown"
+def stage_validate(c: Run):
     try:
-        spec = parse_csv(raw, excitation_nm)
-        meta_in = dict(metadata or {})
-        if excitation_nm:
-            meta_in["excitation_nm"] = excitation_nm
-        meta = ec.normalize_metadata(meta_in)
+        c.spec = parse_any(c.raw, c.filename, c.excitation_nm)
+        c.excitation_nm = c.excitation_nm or c.spec.meta.get("excitation_nm")  # a value stated in the file itself
+        c.meta_in = dict(c.metadata or {})
+        if c.excitation_nm:
+            c.meta_in["excitation_nm"] = c.excitation_nm
+        c.meta = ec.normalize_metadata(c.meta_in)
     except ValidationError as e:
-        yield {"event": "error", "stage": "validate", "message": str(e)}
-        return
+        raise AnalysisFailed("validate", str(e))
     except (ValueError, TypeError) as e:
-        yield {"event": "error", "stage": "validate", "message": f"Invalid experimental conditions: {e}"}
-        return
-    extras_ok, extras_failed = _parse_extras(list(extras), excitation_nm)
-    sections = {"validation": _validation_section(spec, extras_ok, extras_failed)}
-    yield end("validate", detail=f"{spec.x.size} points")
+        raise AnalysisFailed("validate", f"Invalid experimental conditions: {e}")
+    extras_ok, c.extras_failed = _parse_extras(c.extras, c.excitation_nm)
+    # further spectra stored in the main file itself (extra columns, or one spectrum per row) count as additional spectra
+    in_file = [{"name": e["name"], "label": None, "x": c.spec.x, "y": e["y"]} for e in c.spec.extra_y]
+    room = max(0, MAX_EXTRAS - len(extras_ok))
+    c.extras_ok = in_file[:room] + extras_ok
+    if len(in_file) > room:
+        c.extras_failed.append({"name": "columns in the main file", "error": f"Only {MAX_EXTRAS} additional spectra are analysed."})
+    c.sections["validation"] = _validation_section(c.spec, c.extras_ok, c.extras_failed)
+    return "done", f"{c.spec.x.size} points"
 
-    # 2. core pipeline (fatal on failure: nothing else is meaningful without it)
-    yield start("process")
-    cat, desc = ORIGINS[origin]
-    prov = provenance or {"category": cat, "description": desc, "declared_origin": origin}
+
+def stage_process(c: Run):
+    c.cat, desc = ORIGINS[c.origin]
+    c.prov = c.provenance or {"category": c.cat, "description": desc, "declared_origin": c.origin}
     try:
-        a = pipeline.analyze(spec, sample_id, source, excitation_nm, opts, prov)
+        c.a = pipeline.analyze(c.spec, c.sample_id, c.source, c.excitation_nm, c.opts, c.prov)
     except ValueError as e:
-        yield {"event": "error", "stage": "process", "message": str(e)}
-        return
-    sections["spectrum"] = _spectrum_section(a)
-    sections["peaks"] = _peak_section(a)
-    sections["matching"] = _matching_section(a)
-    yield end("process", detail=f"{len(a['peaks'])} peaks")
+        raise AnalysisFailed("process", str(e))
+    c.opts["library"] = c.a["data_provenance"]["library"]  # later stages compare against the same library
+    c.sections["spectrum"] = _spectrum_section(c.a)
+    c.sections["peaks"] = _peak_section(c.a)
+    c.sections["matching"] = _matching_section(c.a)
+    return "done", f"{len(c.a['peaks'])} peaks"
 
-    is_synth = prov.get("category") == "synthetic"
-    dc = "synthetic_example" if is_synth else "measured"  # experiment_conditions only knows these classes for real inputs
 
-    # 3. conditions
-    yield start("conditions")
+def stage_conditions(c: Run):
+    dc = "synthetic_example" if c.prov.get("category") == "synthetic" else "measured"  # classes experiment_conditions knows
     cmp_res = cmp_err = None
-    if extras_ok:
+    if c.extras_ok:
         try:
-            base = {"label": a["sample_id"], "data_class": dc, "metadata": meta_in, "x": spec.x, "y": spec.y}
-            exps = [{"label": e["name"][:60], "data_class": dc, "metadata": {}, "x": e["x"], "y": e["y"]} for e in extras_ok[:8]]
-            cmp_res = ec.compare(base, exps, opts, truth)
+            base = {"label": c.a["sample_id"], "data_class": dc, "metadata": c.meta_in, "x": c.spec.x, "y": c.spec.y}
+            exps = [{"label": e["name"][:60], "data_class": dc, "metadata": {}, "x": e["x"], "y": e["y"]} for e in c.extras_ok[:8]]
+            cmp_res = ec.compare(base, exps, c.opts, c.truth)
             for e in cmp_res["experiments"]:
                 for k in ("raw", "raw_x"):
                     e.pop(k, None)
@@ -502,56 +507,124 @@ def run(raw: bytes, sample_id="uploaded", source="uploaded file", excitation_nm=
                                "to any parameter.")
         except ValueError as e:
             cmp_err = str(e)
-    sections["conditions"] = _conditions_section(meta, spec, cmp_res, cmp_err)
-    yield end("conditions")
+    c.sections["conditions"] = _conditions_section(c.meta, c.spec, cmp_res, cmp_err)
+    return "done", None
 
-    # 4. wavenumber sensitivity on the user's own spectrum (simulated axis shifts)
-    yield start("sensitivity")
+
+def stage_sensitivity(c: Run):
+    """Wavenumber sensitivity on the user's own spectrum (simulated axis shifts). Optional: failure is reported."""
     try:
-        s = ws.sweep(spec.x, spec.y, truth, "axis_shift", None, opts, None, 0, False, a["sample_id"])
-        sections["sensitivity"] = _sensitivity_section(s)
-        yield end("sensitivity")
+        s = ws.sweep(c.spec.x, c.spec.y, c.truth, "axis_shift", None, c.opts, None, 0, False, c.a["sample_id"])
+        c.sections["sensitivity"] = _sensitivity_section(s)
+        return "done", None
     except Exception as e:  # an optional analysis must not sink the report
-        sections["sensitivity"] = _section("Wavenumber sensitivity", ERROR, "The sensitivity test could not be completed.", reason=str(e))
-        yield end("sensitivity", "error", str(e))
+        c.sections["sensitivity"] = _section("Wavenumber sensitivity", ERROR, "The sensitivity test could not be completed.", reason=str(e))
+        return "error", str(e)
 
-    # 5. PCA
-    yield start("pca")
+
+def stage_pca(c: Run):
     try:
-        sections["pca"] = _pca_section({"name": a["sample_id"], "x": spec.x, "y": spec.y}, extras_ok, opts, primary_label)
-        yield end("pca", "skipped" if sections["pca"]["status"] == INSUFFICIENT else "done")
+        c.sections["pca"] = _pca_section({"name": c.a["sample_id"], "x": c.spec.x, "y": c.spec.y}, c.extras_ok, c.opts, c.primary_label)
+        return ("skipped" if c.sections["pca"]["status"] == INSUFFICIENT else "done"), None
     except Exception as e:
-        sections["pca"] = _section("PCA", ERROR, "PCA could not be completed.", reason=str(e))
-        yield end("pca", "error", str(e))
+        c.sections["pca"] = _section("PCA", ERROR, "PCA could not be completed.", reason=str(e))
+        return "error", str(e)
 
-    # 6. benchmark / translation availability (no computation is possible on this input)
-    yield start("models")
-    n = 1 + len(extras_ok)
-    sections["benchmark"] = _benchmark_section(n, [primary_label] + [e.get("label") for e in extras_ok])
-    sections["translation"] = _translation_section()
-    yield end("models", "skipped", "insufficient data")
 
-    # 7. report
-    yield start("report")
-    sections["quality"] = _quality_section(a, cat, sections["sensitivity"] if sections["sensitivity"]["status"] == COMPLETE else None)
+def stage_models(c: Run):
+    """Benchmark / translation availability: no computation is possible on a single upload."""
+    c.n = 1 + len(c.extras_ok)
+    c.sections["benchmark"] = _benchmark_section(c.n, [c.primary_label] + [e.get("label") for e in c.extras_ok])
+    c.sections["translation"] = _translation_section()
+    return "skipped", "insufficient data"
+
+
+def stage_report(c: Run):
+    sens = c.sections["sensitivity"] if c.sections["sensitivity"]["status"] == COMPLETE else None
+    c.sections["quality"] = _quality_section(c.a, c.cat, sens)
     order = ["validation", "spectrum", "peaks", "matching", "conditions", "sensitivity", "pca", "benchmark", "translation", "quality"]
-    sections = {k: sections[k] for k in order}
-    summary, conclusion = _summary_and_conclusion(a, sections, n)
-    analysis = {k: v for k, v in a.items() if k not in ("x", "raw", "baseline", "processed")}
+    sections = {k: c.sections[k] for k in order}
+    summary, conclusion = _summary_and_conclusion(c.a, sections, c.n)
+    analysis = {k: v for k, v in c.a.items() if k not in ("x", "raw", "baseline", "processed", "top_reference_curve")}
     now = datetime.now(timezone.utc)
     report = {
         "report_version": REPORT_VERSION, "software_version": pipeline.VERSION,
         "generated_at": now.isoformat(timespec="seconds"),
-        "brief": _brief(a, sections, conclusion, now),
-        "sample_id": a["sample_id"], "source": a["source"], "declared_origin": origin,
-        "data_provenance": a["data_provenance"], "is_diagnostic": False,
-        "inputs": {"n_spectra": n, "additional": [e["name"] for e in extras_ok], "options": opts, "metadata": meta_in,
-                   "truth_label": truth, "truth_note": "Known only for bundled synthetic examples." if truth else None},
+        "brief": _brief(c.a, sections, conclusion, now),
+        "sample_id": c.a["sample_id"], "source": c.a["source"], "declared_origin": c.origin,
+        "data_provenance": c.a["data_provenance"], "is_diagnostic": False,
+        "inputs": {"n_spectra": c.n, "additional": [e["name"] for e in c.extras_ok], "options": c.opts, "metadata": c.meta_in,
+                   "file_metadata": c.spec.meta, "truth_label": c.truth,
+                   "truth_note": "Known only for bundled synthetic examples." if c.truth else None},
         "executive_summary": summary, "sections": sections, "conclusion": conclusion, "analysis": analysis,
+        "evaluation": _evaluation_summary(c.a),
+        "visual": visual.build(c.a, sections),
     }
-    report = clean(report)
-    yield end("report")
-    yield {"event": "result", "report": report}
+    c.report = clean(report)
+    return "done", None
+
+
+def stage_explain(c: Run):
+    """Plain-language summary. Without the LLM workflow this is the deterministic, rule-based version."""
+    from . import explanation
+    c.report["explanation"] = explanation.rule_based(c.report)
+    return "done", "standard summary"
+
+
+def _evaluation_summary(a):
+    """Held-out performance of the measured library, cited only when the comparison actually used measured references."""
+    if not a["data_provenance"].get("references_by_category", {}).get("measured"):
+        return None
+    ev = evaluation_real.load()
+    if not ev:
+        return None
+    return {"headline": evaluation_real.headline(ev), "thresholds": ev["thresholds"], "date": ev["date"],
+            "clean": ev["summary"]["clean"], "negative_control": ev["negative_control"],
+            "n_materials": ev["n_materials"], "n_reference_spectra": ev["n_reference_spectra"]}
+
+
+STAGE_FUNCS = {"validate": stage_validate, "process": stage_process, "conditions": stage_conditions,
+               "sensitivity": stage_sensitivity, "pca": stage_pca, "models": stage_models, "report": stage_report,
+               "explain": stage_explain}
+
+
+def stage_event(c: Run, sid, status="running", detail=None):
+    if status != "running":
+        c.done += 1
+    e = {"event": "stage", "stage": sid, "label": dict(STAGES)[sid], "status": status, "completed": c.done, "total": len(STAGES)}
+    if status != "running":
+        e["detail"] = detail
+    return e
+
+
+def run_linear(c: Run, funcs=None):
+    funcs = {**STAGE_FUNCS, **(funcs or {})}
+    for sid, _ in STAGES:
+        yield stage_event(c, sid)
+        try:
+            status, detail = funcs[sid](c)
+        except AnalysisFailed as e:
+            yield {"event": "error", "stage": e.stage, "message": str(e)}
+            return
+        yield stage_event(c, sid, status, detail)
+    yield {"event": "result", "report": c.report}
+
+
+def run(raw: bytes, sample_id="uploaded", source="uploaded file", excitation_nm=None, options=None, metadata=None,
+        extras=(), origin="unknown", provenance=None, truth=None, primary_label=None, filename=None, use_agent=None):
+    """Yields {"event": "stage", ...} as each stage starts and ends, then {"event": "result", "report": ...}.
+    A fatal problem (unreadable main file or invalid metadata) yields {"event": "error", ...} and stops.
+    use_agent: None = use the LangGraph workflow when it is installed; False = the plain linear runner."""
+    c = Run(raw, sample_id, source, excitation_nm, options, metadata, extras, origin, provenance, truth, primary_label, filename)
+    if use_agent is not False:
+        try:
+            from ..agent import graph
+        except ImportError:
+            graph = None
+        if graph is not None and graph.available():
+            yield from graph.run(c)
+            return
+    yield from run_linear(c)
 
 
 def build(*args, **kwargs) -> dict:

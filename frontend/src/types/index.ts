@@ -17,6 +17,11 @@ export interface Result {
   limitations: string[]; software_version: string; timestamp: string; is_diagnostic: false
 }
 export interface Example { sample_id: string; description: string; category: string }
+export interface TestFile {
+  id: string; file: string; description: string; tests: string[]; source: string; license: string; size_bytes: number
+  expected: { expect: 'match' | 'inconclusive' | 'error' | 'any'; material?: string; allowed?: string[]; message_contains?: string }
+  excitation_nm?: number; synthetic?: boolean
+}
 export interface Options {
   baseline: boolean; smooth: boolean; window: number; poly: number
   normalize: 'none' | 'vector' | 'max'; prominence: number

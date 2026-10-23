@@ -1,16 +1,67 @@
 import { useEffect, useRef, useState, type DragEvent } from 'react'
 import { AnalysisLoader } from '../components/AnalysisLoader'
 import { ResearchReport } from '../components/report/ResearchReport'
-import { getExamples } from '../services/api'
+import { exampleDownloadUrl, getExamples, getTestFiles, testFilesZipUrl, testFileUrl } from '../services/api'
 import { applyEvent, failRunning, INITIAL_STAGES, isFinished, paced, STEP_MS, type StageState } from '../services/progress'
 import { runAnalysis } from '../services/report'
-import { defaultOptions, type Example } from '../types'
+import { defaultOptions, type Example, type TestFile } from '../types'
 import { emptyConditions, type FullReport } from '../types/report'
 
 type Phase = 'upload' | 'running' | 'error' | 'done'
 type Source = { file: File } | { example: Example }
 
 const NEEDS_EXCITATION = /excitation wavelength/i
+const ACCEPT = '.csv,.tsv,.txt,.dat,.jdx,.dx,.jcamp,.rod,.cif,.json,text/csv,text/plain,application/json'
+
+function expectation(t: TestFile) {
+  const e = t.expected
+  if (e.expect === 'match') return { text: `Expected: ${e.material?.replace(/_/g, ' ')}`, tone: 'text-emerald-700 bg-emerald-50' }
+  if (e.expect === 'inconclusive') return { text: 'Expected: inconclusive', tone: 'text-amber-700 bg-amber-50' }
+  if (e.expect === 'error') return { text: 'Expected: clear error', tone: 'text-rose-700 bg-rose-50' }
+  return { text: `Expected: ${(e.allowed ?? []).join(' or ')}`, tone: 'text-slate-600 bg-slate-100' }
+}
+
+function TestFiles({ files, onRun }: { files: TestFile[]; onRun: (f: File, excitation: string) => void }) {
+  const [busy, setBusy] = useState('')
+  const analyze = async (t: TestFile) => {
+    setBusy(t.id)
+    try {
+      const blob = await (await fetch(testFileUrl(t.id))).blob()
+      onRun(new File([blob], t.file), t.excitation_nm ? String(t.excitation_nm) : '')
+    } finally { setBusy('') }
+  }
+  return (
+    <details className="mt-8 rounded-2xl border border-slate-200 bg-white">
+      <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-slate-800">
+        Test files ({files.length}) <span className="font-normal text-slate-500">· real and synthetic spectra in many formats, each with its expected result</span>
+      </summary>
+      <div className="border-t border-slate-200 px-5 py-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <span>Real spectra come from RRUFF and the Raman Open Database, from specimens that are not in the reference library.</span>
+          <a className="btn-ghost" href={testFilesZipUrl()} download>Download all (zip)</a>
+        </div>
+        <ul className="divide-y divide-slate-100">
+          {files.map(t => {
+            const ex = expectation(t)
+            return (
+              <li key={t.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 text-sm">
+                <span className="min-w-0 flex-1">
+                  <span className="font-mono text-[13px] text-slate-900">{t.file}</span>
+                  <span className="block text-xs text-slate-500">{t.description}</span>
+                </span>
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${ex.tone}`}>{ex.text}</span>
+                <a className="text-accent-600 hover:underline" href={testFileUrl(t.id)} download={t.file}>Download</a>
+                <button type="button" className="text-accent-600 hover:underline disabled:opacity-50" disabled={!!busy} onClick={() => analyze(t)}>
+                  {busy === t.id ? 'Loading…' : 'Analyze'}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </details>
+  )
+}
 
 function UploadPanel({ onFile }: { onFile: (f: File) => void }) {
   const [over, setOver] = useState(false)
@@ -25,10 +76,10 @@ function UploadPanel({ onFile }: { onFile: (f: File) => void }) {
           <svg aria-hidden viewBox="0 0 24 24" className="h-6 w-6 text-white"><path d="M12 16V4m0 0-4.5 4.5M12 4l4.5 4.5M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </span>
         <span className="mt-5 text-lg font-semibold text-slate-900">{over ? 'Release to analyze' : 'Upload a spectrum'}</span>
-        <span className="mt-1 text-sm text-slate-500">Drop a CSV file here, or click to browse</span>
-        <span className="mt-5 text-xs text-slate-400">CSV with <code className="font-mono">raman_shift_cm1</code> (or <code className="font-mono">wavelength_nm</code>) and <code className="font-mono">intensity</code> · up to 5 MB</span>
+        <span className="mt-1 text-sm text-slate-500">Drop a file here, or click to browse</span>
+        <span className="mt-5 max-w-md text-xs leading-relaxed text-slate-400">CSV, TSV or TXT (any delimiter, decimal commas, with or without a header), RRUFF, ROD, JCAMP-DX or JSON · up to 5 MB</span>
       </button>
-      <input ref={input} type="file" accept=".csv,text/csv" className="sr-only" aria-label="Spectrum CSV file"
+      <input ref={input} type="file" accept={ACCEPT} className="sr-only" aria-label="Spectrum file"
         onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) onFile(f) }} />
     </div>
   )
@@ -36,6 +87,7 @@ function UploadPanel({ onFile }: { onFile: (f: File) => void }) {
 
 export function Analyze() {
   const [examples, setExamples] = useState<Example[]>([])
+  const [testFiles, setTestFiles] = useState<TestFile[]>([])
   const [apiError, setApiError] = useState('')
   const [source, setSource] = useState<Source | null>(null)
   const [excitation, setExcitation] = useState('')
@@ -48,6 +100,7 @@ export function Analyze() {
   const abort = useRef<AbortController | null>(null)
 
   useEffect(() => { getExamples().then(setExamples).catch(() => setApiError('The analysis server is not reachable. Start the backend and reload this page.')) }, [])
+  useEffect(() => { getTestFiles().then(setTestFiles).catch(() => setTestFiles([])) }, [])
   useEffect(() => () => abort.current?.abort(), [])
 
   // Reveal steps at a readable pace, never ahead of the server.
@@ -124,14 +177,17 @@ export function Analyze() {
               <button type="button" title={`${x.description} (synthetic)`} onClick={() => run({ example: x }, '')} className="font-medium text-accent-600 hover:text-accent-700 hover:underline">
                 {x.sample_id.replace('demo_', '').replace('_synthetic', '').replace(/_/g, ' ')}
               </button>
+              <a href={exampleDownloadUrl(x.sample_id)} download aria-label={`Download ${x.sample_id}`} title="Download this CSV" className="ml-1 text-slate-400 hover:text-accent-600">↓</a>
             </span>
           ))}
         </p>
       )}
 
+      {testFiles.length > 0 && <TestFiles files={testFiles} onRun={(f, exc) => { setExcitation(exc); run({ file: f }, exc) }} />}
+
       <ol className="mt-16 grid gap-6 border-t border-slate-200 pt-10 sm:grid-cols-3">
-        {[['Upload', 'A single CSV spectrum. No settings to fill in.'], ['Automated analysis', 'Processing, peak detection, reference comparison and robustness tests.'],
-          ['Research report', 'A concise, exportable report with figures, tables and recommendations.']].map(([t, d], i) => (
+        {[['Upload', 'One spectrum file in any common export format. No settings to fill in.'], ['Automated analysis', 'Processing, peak detection, reference comparison and robustness tests.'],
+          ['One clear report', 'A plain-language answer first, with the figures, tables and evidence behind it.']].map(([t, d], i) => (
           <li key={t}>
             <p className="text-xs font-semibold text-accent-600 tabular-nums">0{i + 1}</p>
             <p className="mt-1 font-medium text-slate-900">{t}</p>

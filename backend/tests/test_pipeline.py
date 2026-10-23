@@ -179,6 +179,6 @@ def test_provenance_visible_in_api_and_report():
 def test_scores_never_described_as_probabilities_of_identification():
     r = client.post("/api/analyze/example/demo_paracetamol_synthetic").json()
     assert "not probabilities of identification" in r["similarity_note"]
-    assert r["quality_thresholds"]["status"].startswith("provisional")
+    assert "provisional" in r["quality_thresholds"]["status"]  # SNR/coverage stay provisional even once scores are calibrated
     assert all("not the probability of identification" in m["explanation"] for m in r["matches"] if m["overlap"])
     assert r["is_diagnostic"] is False
