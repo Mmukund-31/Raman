@@ -1,4 +1,4 @@
-# RamanReach
+# RamanReach reasearch tool
 
 Open-source web tool for analysing Raman spectra: upload one file, every applicable analysis runs automatically, and the result is a single report that opens with a plain-language answer. **Experimental, non-diagnostic research prototype.**
 
