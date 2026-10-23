@@ -2,8 +2,6 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { BEAMS, PARTS, PIPELINE, scatteredNm, SPECS, STEPS, type StepId } from '../instrument/model'
 
 const CubeScene = lazy(() => import('../instrument/CubeScene').then(m => ({ default: m.CubeScene })))
-const REPO = 'https://github.com/jacobbusshart/CubeRaman'
-const VIDEO = 'https://youtu.be/bUxc6mWsTgc'
 const TOUR_MS = 7000
 
 function Kicker({ children }: { children: string }) {
@@ -159,12 +157,6 @@ export function Instrument({ onAnalyze }: { onAnalyze: () => void }) {
             <div key={k} className="flex justify-between gap-6 py-3 text-sm"><dt className="text-slate-500">{k}</dt><dd className="text-right font-medium text-slate-900">{val}</dd></div>
           ))}
         </dl>
-      </section>
-
-      <section className="border-t border-slate-200 pt-6 text-xs leading-relaxed text-slate-500">
-        Based on the open-source <a className="font-medium text-accent-600 hover:underline" href={REPO} target="_blank" rel="noreferrer">CubeRaman</a> project by Jacob Busshart
-        (see also the <a className="font-medium text-accent-600 hover:underline" href={VIDEO} target="_blank" rel="noreferrer">build video</a>). The 3D model is an original, simplified schematic;
-        proportions are illustrative and no CubeRaman images, CAD files or code are reproduced.
       </section>
     </div>
   )

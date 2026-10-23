@@ -61,3 +61,12 @@ Backend modules (`backend/app/services/`): `perturbations`, `dataset_builder`, `
 
 Run tests: `cd backend && .venv/Scripts/python -m pytest -q`. Frontend: `cd frontend && npm run build`.
 Optional deep models: `pip install torch --index-url https://download.pytorch.org/whl/cpu`, then tick "Include deep models" in Model Benchmark.
+
+## Diabetes urine study
+The **Diabetes study** page (`#/diabetes`) applies Raman urinalysis to diabetes screening and to monitoring treatment response. It uses two datasets (see `DATA_SOURCES.md`): measured patient urine from Zenodo 7343559 (CC BY 1.0) and a **simulated** 12-week monitoring trial. For each dataset the page shows cohort mean spectra, glucose/ketone/urea band indices (normalised to creatinine at 680 cm⁻¹), PCA, a cross-validated screening classifier (ROC, sensitivity, specificity) and, for the trial, glucose-index trajectories. You can also place an uploaded urine spectrum within the cohort. Every result is drawn both as a 2D and an interactive 3D figure; the general analysis report likewise pairs 2D figures with 3D views. Raman spectroscopy monitors urine chemistry; it does not diagnose, treat or cure diabetes.
+
+Regenerate data: `py data/urine/generate_urine_trial.py`; `backend/.venv/Scripts/python backend/scripts/fetch_urine_zenodo.py` (downloads ~145 MB into `data/raw/`).
+Endpoints: `GET /api/urine/datasets`, `GET /api/urine/study/{trial|zenodo}`, `GET /api/urine/examples`, `GET /api/urine/examples/{id}/download`, `POST /api/urine/analyze` (file or `example`, `dataset`).
+
+### Personalised monitoring (Study 1 of the programme)
+The diabetes study is the first step of a personalised-healthcare programme (roadmap on the study page: kidney and metabolic health, multi-biofluid profiling, personal health baselines). Its **Personal profile** view reads each trial participant against their own week-0 baseline. A change counts as meaningful only if it exceeds the reference change value RCV = 1.96·√2·√(SDw² + (CV·baseline)²). SDw is measured from the visit-to-visit spread of the control participants; the within-person CV (20% for glucose and ketones, `ASSUMED_CV` in `services/urine.py`) is an assumption until repeat samples from stable patients are available. Endpoint: `GET /api/urine/participant/{id}`.

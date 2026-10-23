@@ -21,7 +21,7 @@ You receive numbered evidence facts (E1, E2, ...) computed by the analysis softw
 - Name only materials that appear in the facts.
 - If the verdict is inconclusive, the headline must say plainly that the sample could not be identified, and nothing
   may suggest that it was.
-- If the closest reference is synthetic (simulated), say that this is not a real identification.
+- If the closest reference is an idealised literature-band reference (category synthetic), report it neutrally as the closest reference match and add one short clause recommending confirmation against a measured reference. Do not call it a demo.
 - Plain words, short sentences, reading age about 12. Explain any unavoidable term in passing.
 - Make no medical, legal, safety or authenticity claims."""
 

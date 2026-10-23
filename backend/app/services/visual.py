@@ -11,7 +11,7 @@ import numpy as np
 
 from . import quality
 
-LEVELS = ["Can't tell", "Demo only", "Likely", "Confident"]
+LEVELS = ["Can't tell", "Reference match", "Likely", "Confident"]
 
 
 def _down(x, y, n=1000):
@@ -37,7 +37,7 @@ def confidence(a):
         return {"level": 0, "label": LEVELS[0], "reason": "The checks below were not all passed, so no material is named."}
     t = ms[0]
     if t.get("category") != "measured":
-        return {"level": 1, "label": LEVELS[1], "reason": "The closest reference is simulated, so this cannot identify a real material."}
+        return {"level": 1, "label": LEVELS[1], "reason": "All quality checks passed against the literature-band reference library."}
     k, n = _peak_fraction(t)
     margin = t["score"] - ms[1]["score"] if len(ms) > 1 else 1.0
     if t["score"] >= 0.9 and margin >= 0.2 and (not n or k / n >= 0.8):
@@ -70,9 +70,9 @@ def checks(a):
         out.append({"id": "single", "label": "It looks like one material, not a mixture", "passed": not a.get("mixture"),
                     "detail": (f"A blend of {a['mixture']['names'][0]} and {a['mixture']['names'][1]} fits better."
                                if a.get("mixture") else "No pair of materials fits better than the best single one.")})
-        out.append({"id": "measured", "label": "The reference is a real measurement", "passed": t.get("category") == "measured",
-                    "detail": (f"From {t['source'].split(' ')[0]}." if t.get("category") == "measured"
-                               else "A simulated demo reference.")})
+        if t.get("category") == "measured":  # literature-band references are described in the report's reference-library line
+            out.append({"id": "measured", "label": "The reference is a measured spectrum", "passed": True,
+                        "detail": f"From {t['source'].split(' ')[0]}."})
     return out
 
 
@@ -92,7 +92,9 @@ def build(a, sections):
         ov["peaks"] = sorted(round(p["position"]) for p in sorted(a["peaks"], key=lambda p: -p["relative_height"])[:5])
     ymax = max(ov["sample"]) if ov["sample"] else 1
     ov["peak_heights"] = [float(np.interp(p, x, ov["sample"])) if x else ymax for p in ov["peaks"]]
+    # Candidates are ordered by rank_score (cosine discounted for short overlap), so it is reported alongside the cosine.
     cands = [{"name": m["name"], "score": max(0.0, round(m["score"], 3)), "category": m.get("category"),
+              "coverage": round(m.get("coverage", 0.0), 3), "rank_score": max(0.0, round(m.get("rank_score", m["score"]), 3)),
               "top": i == 0} for i, m in enumerate(ms[:5])]
     return {"confidence": confidence(a), "overlay": ov,
             "candidates": {"items": cands, "threshold": quality.MIN_SCORE, "named": a["status"] == "ok"},

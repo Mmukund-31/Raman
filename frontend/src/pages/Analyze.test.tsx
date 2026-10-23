@@ -6,6 +6,7 @@ import type { ProgressEvent } from '../types/report'
 import { Analyze } from './Analyze'
 
 vi.mock('../components/report/Figure', () => ({ Figure: ({ label }: { label: string }) => <div data-testid="figure">{label}</div> }))
+vi.mock('../components/report/Figure3D', () => ({ Figure3D: ({ label }: { label: string }) => <div data-testid="figure3d">{label}</div>, FigurePair: ({ two, three }: { two: React.ReactNode; three: React.ReactNode }) => <div>{two}{three}</div> }))
 
 const examples = [{ sample_id: 'demo_paracetamol_synthetic', description: 'Paracetamol-like bands', category: 'synthetic' }]
 const testFiles = [{ id: 'calcite_json', file: 'calcite.json', description: 'Calcite as JSON arrays.', tests: ['JSON'], source: 'derived', license: 'RRUFF', size_bytes: 10, expected: { expect: 'match', material: 'calcite' } }]

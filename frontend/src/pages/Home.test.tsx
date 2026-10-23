@@ -15,7 +15,7 @@ const noop = () => {}
 
 describe('Home page', () => {
   it('opens on the assembled overview and lets the user pick a step', async () => {
-    render(<Home onAnalyze={noop} onInstrument={noop} />)
+    render(<Home onAnalyze={noop} />)
     const s = await scene()
     expect(s.dataset.step).toBe('')
     expect(s.dataset.inside).toBe('false')
@@ -28,7 +28,7 @@ describe('Home page', () => {
 
   it('plays the guided tour through every step and returns to the overview', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
-    render(<Home onAnalyze={noop} onInstrument={noop} />)
+    render(<Home onAnalyze={noop} />)
     await scene()
     fireEvent.click(screen.getByRole('button', { name: 'Start the tour' }))
     const seen: string[] = []
@@ -40,7 +40,7 @@ describe('Home page', () => {
   })
 
   it('pauses the tour when the user takes over, and wraps with the arrows', async () => {
-    render(<Home onAnalyze={noop} onInstrument={noop} />)
+    render(<Home onAnalyze={noop} />)
     fireEvent.click(screen.getByRole('button', { name: /From counts to a report/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Next step' }))
     expect((await scene()).dataset.step).toBe('laser')
@@ -49,7 +49,7 @@ describe('Home page', () => {
   })
 
   it('toggles the inside and exploded views', async () => {
-    render(<Home onAnalyze={noop} onInstrument={noop} />)
+    render(<Home onAnalyze={noop} />)
     fireEvent.click(screen.getByRole('button', { name: 'Inside view' }))
     expect((await scene()).dataset.inside).toBe('true')
     fireEvent.click(screen.getByRole('button', { name: 'Exploded' }))
@@ -58,17 +58,16 @@ describe('Home page', () => {
     expect((await scene()).dataset.exploded).toBe('false')
   })
 
-  it('explains the report pipeline, credits the source and links onward', async () => {
-    const onAnalyze = vi.fn(), onInstrument = vi.fn()
-    render(<Home onAnalyze={onAnalyze} onInstrument={onInstrument} />)
+  it('explains the report pipeline and links onward, leaving specifications to the Instrument page', async () => {
+    const onAnalyze = vi.fn(), onStudy = vi.fn()
+    render(<Home onAnalyze={onAnalyze} onStudy={onStudy} />)
     await scene()
     expect(screen.getByRole('heading', { name: 'How RamanReach uses a CubeRaman spectrum' })).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'CubeRaman' }).getAttribute('href')).toBe('https://github.com/jacobbusshart/CubeRaman')
+    expect(screen.queryByRole('heading', { name: 'Key specifications' })).toBeNull()
     expect(document.querySelectorAll('img')).toHaveLength(0)
-    expect(screen.getByText(/Class 3B/, { selector: 'p' })).toBeTruthy()
     fireEvent.click(screen.getAllByRole('button', { name: 'Analyze a spectrum' })[0])
     expect(onAnalyze).toHaveBeenCalledOnce()
-    fireEvent.click(screen.getByRole('button', { name: /More on how the optics work/ }))
-    expect(onInstrument).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: /Explore the diabetes study/ }))
+    expect(onStudy).toHaveBeenCalledOnce()
   })
 })

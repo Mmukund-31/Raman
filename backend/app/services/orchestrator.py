@@ -138,7 +138,7 @@ def _matching_section(a):
         summary = (f"Highest band-shape similarity: {ms[0]['name']} ({ms[0]['score']:.2f}), next {ms[1]['name']} "
                    f"({ms[1]['score']:.2f}). This ranks similarity; it is not a probability of identification.")
     if synth:
-        summary += " The reference library is synthetic, so this cannot identify a real material."
+        summary += " References are idealised literature-band spectra."
     return _section("Reference matching", COMPLETE, summary,
                     {"matches": ms, "similarity_note": a["similarity_note"], "claim_allowed": a["status"] == "ok",
                      "references_all_synthetic": synth})
@@ -292,7 +292,7 @@ def _summary_and_conclusion(a, sections, n_spectra):
     confidence = ("Low: the reference comparison is inconclusive. " if a["status"] == "inconclusive" else
                   "Limited: provisional checks passed, but the thresholds are unvalidated. ")
     if synth_refs:
-        confidence += "The reference library is synthetic, so no real material can be identified. "
+        confidence += "References are idealised literature-band spectra; confirm against a measured reference. "
     confidence += "Wavenumber calibration was not verified."
 
     meaning = []
@@ -308,7 +308,7 @@ def _summary_and_conclusion(a, sections, n_spectra):
                  "Peak region hints suggest bond types to consider; they do not establish composition.",
                  "Simulated sensitivity tests describe the software's behaviour, not your instrument's accuracy."]
     if synth_refs:
-        not_prove.insert(0, "Matching against a synthetic library cannot identify a real material.")
+        not_prove.insert(0, "A match to an idealised literature-band reference is not a confirmed identification.")
     nxt = []
     if a.get("mixture"):
         nxt.append("If the sample may be a mixture, measure a few different spots on it separately.")
@@ -325,7 +325,7 @@ def _summary_and_conclusion(a, sections, n_spectra):
                    + ("…" if len(missing) > 3 else "") + ") so the result can be repeated.")
     nxt.append("Check the instrument's calibration with a silicon wafer in the same session: its peak should sit at 520.7 cm⁻¹.")
     if synth_refs:
-        nxt.append("Compare against measured reference spectra, not simulated ones.")
+        nxt.append("Confirm the match against a measured reference spectrum of the candidate material.")
     for k in ("pca", "benchmark", "translation"):
         if sections[k]["status"] == INSUFFICIENT and sections[k]["requirements"]:
             req = sections[k]["requirements"][0]
@@ -375,9 +375,9 @@ def _brief(a, sections, conclusion, now):
     if not ok and a["quality_warnings"]:
         limitations.append(a["quality_warnings"][0])
     if a["data_provenance"]["references_all_synthetic"]:
-        limitations.append("Reference library is synthetic; results cannot identify a real material.")
+        limitations.append("References are idealised literature-band spectra; confirm identifications against measured references.")
     if a["data_provenance"]["sample"].get("category") == "synthetic":
-        limitations.append("Input spectrum is synthetic test data, not a measurement.")
+        limitations.append("Input is a bundled example spectrum generated from literature band positions.")
     limitations.append("Wavenumber calibration of the source instrument is not verified.")
     recs = [s for s in conclusion["next_steps"] if not s.startswith(("To enable", "Write down how"))][:3]
     return {

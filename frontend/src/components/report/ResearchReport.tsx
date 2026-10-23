@@ -2,23 +2,36 @@ import { useState, type ReactNode } from 'react'
 import type { Data } from 'plotly.js'
 import { SpectrumPlot } from '../SpectrumPlot'
 import { Figure } from './Figure'
+import { Figure3D, FigurePair } from './Figure3D'
+import { curtain, spaced } from './ribbons'
 import { download, fetchFullReportHtml, printHtml, processedCsv } from '../../services/report'
 import type { FullReport, VisualSummary } from '../../types/report'
 
 // Validated pair (dataviz validator, white surface): sample = slot 1 blue, reference = slot 2 orange.
 const SAMPLE = '#2a78d6'
 const REFERENCE = '#eb6834'
-const MUTED_BAR = '#c3c2b7'
-const STATUS = { good: '#0ca30c', critical: '#d03b3b', warning: '#fab219' }
+const STATUS = { good: '#0ca30c', critical: '#d03b3b' }
+const RESULT: Record<number, { word: string; color: string }> = {
+  3: { word: 'Confirmed match', color: '#157f54' }, 2: { word: 'Probable match', color: '#157f54' },
+  1: { word: 'Closest reference match', color: '#0f766e' }, 0: { word: 'No confident match', color: '#475569' },
+}
 
-function H({ children }: { children: ReactNode }) {
-  return <h2 className="mb-3 text-base font-semibold text-slate-900">{children}</h2>
+function H({ n, children }: { n: string; children: ReactNode }) {
+  return (
+    <h2 className="mb-4 flex items-baseline gap-2 border-b border-accent-100 pb-2 text-lg font-semibold text-accent-900" style={{ fontFamily: 'var(--font-serif)' }}>
+      <span aria-hidden className="text-accent-600 tabular-nums">{n}</span>{children}
+    </h2>
+  )
+}
+
+function Caption({ n, children }: { n: string; children: ReactNode }) {
+  return <p className="mt-2 text-[13px] leading-relaxed text-slate-600"><b className="font-semibold text-slate-900">Figure {n}.</b> {children}</p>
 }
 
 function Bullets({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2">
-      {items.map((t, i) => <li key={i} className="flex gap-3 leading-relaxed text-slate-700"><span aria-hidden className="mt-2.5 h-1 w-1 flex-none rounded-full bg-slate-400" />{t}</li>)}
+      {items.map((t, i) => <li key={i} className="flex gap-3 text-sm leading-relaxed text-slate-700"><span aria-hidden className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-accent-500" />{t}</li>)}
     </ul>
   )
 }
@@ -43,51 +56,104 @@ function Actions({ r, onNew }: { r: FullReport; onNew: () => void }) {
   )
 }
 
-/** The answer in one glance: icon + verdict + one sentence + a three-step "how sure" meter. */
+function library(r: FullReport) {
+  const p = r.data_provenance
+  const names: Record<string, string> = { measured: 'measured (RRUFF/ROD)', synthetic: 'literature-band' }
+  const parts = Object.entries(p.references_by_category ?? {}).map(([c, n]) => `${n} ${names[c] ?? c}`).join(', ')
+  return `${p.n_materials ?? '—'} materials, ${p.n_reference_spectra ?? '—'} spectra${parts ? ` (${parts})` : ''}`
+}
+
+/** 1 · Sample information, as a two-column specification list. */
+function SampleInfo({ r }: { r: FullReport }) {
+  const v = r.sections.validation.data
+  const params = r.sections.spectrum.data.parameters ?? {}
+  const exc = (r.inputs.metadata.excitation_nm as number | undefined) ?? r.sections.conditions.data?.excitation?.excitation_nm
+  const rows: [string, ReactNode][] = [
+    ['Sample ID', <b key="s" className="font-semibold text-slate-900">{r.sample_id}</b>], ['Source', r.source],
+    ['Spectral data', v?.range_cm1 ? `${v.points} points, ${v.range_cm1[0].toFixed(0)}–${v.range_cm1[1].toFixed(0)} cm⁻¹` : '—'],
+    ['Excitation wavelength', exc ? `${exc} nm` : 'Not stated in file'], ['Spectra in file', String(r.inputs.n_spectra)],
+    ['Reference library', library(r)],
+    ['Processing', `Despike, ${String(params.baseline ?? 'als').toUpperCase()} baseline, ${params.smoothing ?? 'savgol'} smoothing, ${params.normalization ?? 'vector'} normalisation`],
+  ]
+  return (
+    <dl className="grid overflow-hidden rounded-xl border border-slate-200 text-sm sm:grid-cols-2">
+      {rows.map(([k, val]) => (
+        <div key={k} className="flex gap-4 border-b border-slate-100 px-4 py-2.5 sm:odd:border-r">
+          <dt className="w-40 flex-none text-slate-500">{k}</dt><dd className="min-w-0 text-slate-800">{val}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** 2 · Result summary: status, headline, one sentence on certainty, then the key numbers. */
 function Answer({ r, v }: { r: FullReport; v: VisualSummary }) {
   const c = v.confidence
-  const tone = c.level >= 2 ? { bg: 'bg-emerald-50', ring: 'ring-emerald-200', icon: '✓', color: STATUS.good, word: 'Match found' }
-    : c.level === 1 ? { bg: 'bg-amber-50', ring: 'ring-amber-200', icon: 'i', color: STATUS.warning, word: 'Demo result' }
-      : { bg: 'bg-slate-50', ring: 'ring-slate-200', icon: '?', color: '#52514e', word: 'No clear match' }
-  const steps = ["Can't tell", 'Likely', 'Confident']
-  const filled = c.level === 3 ? 3 : c.level === 2 ? 2 : c.level === 0 ? 1 : 0
+  const s = RESULT[c.level]
+  const items = v.candidates.items
+  const top = items[0]
+  const gap = items.length > 1 ? items[0].score - items[1].score : null
+  const passed = v.checks.filter(x => x.passed).length
+  const kpis: [string, string, string?][] = [
+    ['Closest reference', top?.name ?? '—'], ['Similarity', top ? top.score.toFixed(2) : '—', 'cosine, 0–1'],
+    ['Margin to runner-up', gap != null ? gap.toFixed(2) : '—'], ['Quality checks', `${passed}/${v.checks.length}`, 'passed'],
+    ['Confidence', c.label],
+  ]
   return (
-    <section aria-label="Answer" className={`rounded-2xl ${tone.bg} p-6 ring-1 ${tone.ring} sm:p-8`}>
-      <div className="flex items-start gap-5">
-        <span aria-hidden className="flex h-14 w-14 flex-none items-center justify-center rounded-full text-2xl font-bold text-white" style={{ background: tone.color }}>{tone.icon}</span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold tracking-wide text-slate-600 uppercase">{tone.word}</p>
-          <p className="mt-1 text-2xl font-semibold text-balance text-slate-900 sm:text-[28px] sm:leading-tight">{r.explanation?.headline ?? r.brief.headline}</p>
-        </div>
+    <section aria-label="Answer">
+      <div className="rounded-xl border border-accent-200 bg-mint p-5 sm:p-6" style={{ borderLeft: `5px solid ${s.color}` }}>
+        <p className="text-[11px] font-bold tracking-[0.14em] uppercase" style={{ color: s.color }}>{s.word}</p>
+        <p className="mt-1 text-xl font-semibold text-balance text-slate-900 sm:text-2xl" style={{ fontFamily: 'var(--font-serif)' }}>{r.explanation?.headline ?? r.brief.headline}</p>
+        <p className="mt-2 text-sm leading-relaxed text-slate-600">{r.explanation?.how_sure ?? c.reason}</p>
       </div>
-      <div className="mt-6">
-        <p className="text-sm font-medium text-slate-700">How sure are we? <span className="font-semibold text-slate-900">{c.label}</span></p>
-        {c.level === 1 ? (
-          <p className="mt-2 text-sm text-slate-600">{c.reason}</p>
-        ) : (
-          <>
-            <div role="meter" aria-label="Confidence" aria-valuemin={1} aria-valuemax={3} aria-valuenow={filled} aria-valuetext={c.label} className="mt-2 grid max-w-md grid-cols-3 gap-1">
-              {steps.map((s, i) => (
-                <div key={s}>
-                  <div className={`h-2 rounded-full ${i < filled ? '' : 'bg-white ring-1 ring-slate-200'}`} style={i < filled ? { background: filled === 1 ? '#898781' : STATUS.good } : undefined} />
-                  <p className={`mt-1 text-xs ${i === filled - 1 ? 'font-semibold text-slate-900' : 'text-slate-500'}`}>{s}</p>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-sm text-slate-600">{c.reason}</p>
-          </>
-        )}
-      </div>
+      <dl className="mt-3 grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200 sm:grid-cols-5">
+        {kpis.map(([k, val, note]) => (
+          <div key={k} className="border-slate-200 px-4 py-3 sm:border-l sm:first:border-l-0">
+            <dt className="text-[10.5px] tracking-wide text-slate-500 uppercase">{k}</dt>
+            <dd className="mt-0.5 truncate text-lg font-semibold text-slate-900" title={val}>{val}</dd>
+            {note && <dd className="text-[11px] text-slate-400">{note}</dd>}
+          </div>
+        ))}
+      </dl>
     </section>
   )
 }
 
-/** Figure 1: the sample drawn over the best-matching reference, both scaled to their own maximum. */
+/** Sample in front, reference behind, as filled curtains with the shared peaks marked on the sample. */
+function overlay3d(v: VisualSummary): Data[] {
+  const o = v.overlay
+  const out = curtain(o.x, o.sample, 0, SAMPLE, 'Sample')
+  if (o.reference) out.push(...curtain(o.reference.x, o.reference.y, 1, REFERENCE, `${o.reference_name} (reference)`))
+  if (o.peaks.length) {
+    const keep = spaced(o.peaks, o.peak_heights)
+    out.push({
+      type: 'scatter3d', mode: 'text+markers', name: 'Shared peaks', x: o.peaks, y: o.peaks.map(() => 0), z: o.peak_heights.map(h => h + 0.05),
+      text: o.peaks.map((p, i) => (keep[i] ? String(p) : '')), textposition: 'top center', textfont: { size: 10, color: '#334155' },
+      marker: { size: 3, color: '#334155' }, hovertemplate: 'Peak %{x:.0f} cm⁻¹<extra></extra>',
+    } as Data)
+  }
+  return out
+}
+
+/** Processing stages stacked in depth, each scaled to its own range: raw → baseline → corrected → processed. */
+function stages3d(r: FullReport): Data[] {
+  const d = r.sections.spectrum.data
+  const scale = (y: number[], ref = y) => { const lo = Math.min(...ref), hi = Math.max(...ref) - lo || 1; return y.map(q => (q - lo) / hi) }
+  const corrected = d.raw.map((q, i) => q - d.baseline[i])
+  const rows: [string, number[], string][] = [
+    ['Raw counts', scale(d.raw), '#898781'], ['Fitted baseline', scale(d.baseline, d.raw), '#d97706'],
+    ['Baseline removed', scale(corrected), '#1baf7a'], ['Processed', scale(d.processed), SAMPLE],
+  ]
+  return rows.flatMap(([name, z, color], k) => curtain(d.x, z, k, color, name, { fill: 0.6 }))
+}
+
+const STAGE_TICKS = { vals: [0, 1, 2, 3], text: ['Raw', 'Baseline', 'Corrected', 'Processed'] }
+
 function Overlay({ v }: { v: VisualSummary }) {
   const o = v.overlay
   const traces: Data[] = [{
-    x: o.x, y: o.sample, type: 'scatter', mode: 'lines', name: 'Your sample', line: { color: SAMPLE, width: 2 },
-    hovertemplate: 'Your sample: %{y:.2f}<extra></extra>',
+    x: o.x, y: o.sample, type: 'scatter', mode: 'lines', name: 'Sample', line: { color: SAMPLE, width: 2 },
+    hovertemplate: 'Sample: %{y:.2f}<extra></extra>',
   }]
   if (o.reference) traces.push({
     x: o.reference.x, y: o.reference.y, type: 'scatter', mode: 'lines', name: `${o.reference_name} (reference)`,
@@ -97,61 +163,103 @@ function Overlay({ v }: { v: VisualSummary }) {
     x: p, y: o.peak_heights[i], text: `${p}`, showarrow: true, arrowhead: 0, arrowcolor: '#898781', ax: 0, ay: -22,
     font: { size: 11, color: '#52514e' },
   }))
+  const xs = [...o.x, ...(o.reference?.x ?? [])]
   return (
     <section>
-      <H>{!o.reference ? 'Your spectrum' : v.candidates.named ? `Your spectrum next to ${o.reference_name}` : `Your spectrum next to the closest material, ${o.reference_name}`}</H>
-      <Figure data={traces} height={320} label="Sample spectrum overlaid on the best-matching reference spectrum"
-        xTitle="Raman shift (cm⁻¹) — position of each peak" yTitle="Relative strength"
-        layout={{ hovermode: 'x unified', legend: { orientation: 'h', y: 1.12, x: 0, font: { size: 12 } }, margin: { t: 36, r: 16, l: 56, b: 52 },
-          yaxis: { gridcolor: '#eef2f7', zeroline: false, tickfont: { size: 11, color: '#64748b' }, title: { text: 'Relative strength', font: { size: 12 } }, range: [-0.05, 1.18] },
-          annotations }} />
-      <p className="text-sm text-slate-600">
-        Each spike (“peak”) is part of the material’s fingerprint. {o.reference ? 'The more the blue and orange peaks line up, the better the match.' : ''}
-        {o.peaks.length > 0 && <> Labelled numbers are {o.reference ? 'peaks both spectra share' : 'the strongest peaks'}.</>}
+      <H n="3">Spectral comparison</H>
+      <FigurePair
+        two={<Figure data={traces} height={330} label="Sample spectrum overlaid on the best-matching reference spectrum"
+          xTitle="Raman shift (cm⁻¹)" yTitle="Relative intensity"
+          layout={{ hovermode: 'x unified', legend: { orientation: 'h', y: 1.12, x: 0, font: { size: 12 } }, margin: { t: 36, r: 16, l: 56, b: 52 },
+            yaxis: { range: [-0.05, 1.18] }, annotations }} />}
+        three={<Figure3D data={overlay3d(v)} height={340} label="Sample and reference spectra as a 3D waterfall with the shared peaks marked"
+          xTitle="Raman shift (cm⁻¹)" yTitle="" zTitle="Relative intensity" aspect={{ x: 2.3, y: 0.8, z: 0.75 }}
+          yTicks={{ vals: o.reference ? [0, 1] : [0], text: o.reference ? ['Sample', 'Reference'] : ['Sample'] }}
+          xRange={[Math.min(...xs), Math.max(...xs)]} zRange={[0, 1.2]} />} />
+      <Caption n="1">
+        Processed sample spectrum{o.reference ? <> and the best-matching reference, {o.reference_name}</> : ''}, each scaled to its own maximum.
+        {o.peaks.length > 0 && <> Labels mark {o.reference ? 'peaks found in both spectra' : 'the strongest peaks'} (cm⁻¹).</>} The 3D view places the spectra on separate tracks for side-by-side comparison.
+      </Caption>
+    </section>
+  )
+}
+
+const REF_TYPE: Record<string, string> = { measured: 'Measured reference', synthetic: 'Literature-band reference' }
+
+/**
+ * 4 · Candidate ranking. Candidates are ordered by the ranking score (cosine similarity discounted when the overlap
+ * covers too little of the reference or of the sample), so that score is the bar; similarity and coverage explain it.
+ */
+function Candidates({ v }: { v: VisualSummary }) {
+  const { items, threshold } = v.candidates
+  const th = 'px-3 py-2.5 text-[11px] font-semibold tracking-wider uppercase'
+  return (
+    <section>
+      <H n="4">Candidate ranking</H>
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-accent-200 bg-mint text-left text-accent-900">
+              <th className={`${th} w-12`}>Rank</th><th className={th}>Candidate material</th>
+              <th className={`${th} text-right`}>Similarity</th><th className={`${th} text-right`}>Coverage</th>
+              <th className={`${th} w-[34%]`}>Ranking score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((c, i) => {
+              const rank = c.rank_score ?? c.score
+              const below = c.score < threshold
+              return (
+                <tr key={c.name} className={`border-b border-slate-100 last:border-0 ${c.top ? 'bg-accent-50/60' : ''}`}>
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums ${c.top ? 'bg-accent-700 text-white' : 'bg-slate-100 text-slate-600'}`}>{i + 1}</span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className={`block ${c.top ? 'font-semibold text-slate-900' : 'text-slate-800'}`}>{c.name}</span>
+                    {c.category && <span className="text-[11px] text-slate-500">{REF_TYPE[c.category] ?? c.category}</span>}
+                  </td>
+                  <td className={`px-3 py-2.5 text-right tabular-nums ${below ? 'text-slate-400' : 'text-slate-800'}`} title={below ? `Below the ${threshold.toFixed(2)} reporting threshold` : undefined}>
+                    {c.score.toFixed(2)}{below && <sup className="ml-0.5 text-slate-400">†</sup>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-slate-600 tabular-nums">{c.coverage != null ? `${Math.round(c.coverage * 100)}%` : '—'}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-3">
+                      <div className="h-1.5 flex-1 rounded-full bg-slate-100">
+                        <div className="h-full rounded-full" style={{ width: `${Math.min(1, rank) * 100}%`, background: c.top ? '#157f54' : '#86d3a8' }} />
+                      </div>
+                      <span className="w-9 text-right text-xs font-medium text-slate-700 tabular-nums">{rank.toFixed(2)}</span>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-slate-500">
+        <b className="font-medium text-slate-600">Similarity</b>: cosine similarity of band shape over the overlapping range (0 = unrelated, 1 = identical).{' '}
+        <b className="font-medium text-slate-600">Coverage</b>: share of the reference's range that the measurement overlaps.{' '}
+        <b className="font-medium text-slate-600">Ranking score</b>: similarity discounted when coverage is below 70% or the overlap holds under 60% of the sample's signal; candidates are ordered by it.{' '}
+        † below the {threshold.toFixed(2)} similarity required to report a match.
       </p>
     </section>
   )
 }
 
-/** Figure 2: closest materials as simple bars, with the level needed to name one. */
-function Candidates({ v }: { v: VisualSummary }) {
-  const { items, threshold, named } = v.candidates
-  return (
-    <section>
-      <H>How close were the candidates?</H>
-      <div className="relative">
-        <ol className="space-y-3">
-          {items.map(c => (
-            <li key={c.name} title={`${c.name}: similarity ${c.score.toFixed(2)} out of 1${c.category === 'synthetic' ? ' (simulated reference)' : ''}`}>
-              <div className="flex justify-between text-sm">
-                <span className={c.top ? 'font-semibold text-slate-900' : 'text-slate-600'}>{c.name}{c.category === 'synthetic' && <span className="ml-1 text-xs text-slate-400">(demo)</span>}</span>
-                <span className="text-slate-700 tabular-nums">{c.score.toFixed(2)}</span>
-              </div>
-              <div className="relative mt-1 h-2.5 rounded-full bg-slate-100">
-                <div className="h-full rounded-full" style={{ width: `${Math.min(1, c.score) * 100}%`, background: c.top && named ? SAMPLE : MUTED_BAR }} />
-                <div aria-hidden className="absolute -top-1 -bottom-1 w-px bg-slate-500" style={{ left: `${threshold * 100}%` }} />
-              </div>
-            </li>
-          ))}
-        </ol>
-      </div>
-      <p className="mt-3 text-xs text-slate-500">Bars show how alike each material’s fingerprint is, from 0 (nothing alike) to 1 (identical). The thin line at {threshold.toFixed(2)} is the minimum needed before we name a material; the gap to the next bar matters too.</p>
-    </section>
-  )
-}
-
+/** 5 · Quality control: every criterion with a PASS/FAIL label that does not rely on colour. */
 function Checks({ v }: { v: VisualSummary }) {
   return (
     <section>
-      <H>Checks we ran</H>
-      <ul className="space-y-2.5">
+      <H n="5">Quality control</H>
+      <ul className="grid gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 md:grid-cols-2">
         {v.checks.map(c => (
-          <li key={c.id} className="flex gap-3">
-            <span aria-hidden className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: c.passed ? STATUS.good : STATUS.critical }}>{c.passed ? '✓' : '✕'}</span>
+          <li key={c.id} className="flex items-start justify-between gap-4 bg-white px-4 py-3 md:last:odd:col-span-2">
             <span className="text-sm">
               <span className="font-medium text-slate-900">{c.label}</span>
-              <span className="sr-only">{c.passed ? ' — passed' : ' — not passed'}</span>
-              <span className="block text-slate-500">{c.detail}</span>
+              <span className="block text-xs text-slate-500">{c.detail}</span>
+            </span>
+            <span className="mt-0.5 flex-none rounded-full px-2.5 py-0.5 text-[10.5px] font-bold tracking-wider text-white" style={{ background: c.passed ? STATUS.good : STATUS.critical }}>
+              {c.passed ? 'PASS' : 'FAIL'}<span className="sr-only">{c.passed ? ' — passed' : ' — not passed'}</span>
             </span>
           </li>
         ))}
@@ -160,47 +268,57 @@ function Checks({ v }: { v: VisualSummary }) {
   )
 }
 
-function Technical({ r }: { r: FullReport }) {
+function Appendix({ r }: { r: FullReport }) {
   const b = r.brief
   const e = r.explanation
+  const notes = r.evaluation?.headline ? [...b.limitations, r.evaluation.headline] : b.limitations
   return (
-    <details className="rounded-2xl border border-slate-200 bg-white">
-      <summary className="cursor-pointer px-5 py-4 text-sm font-medium text-slate-700">Technical details <span className="font-normal text-slate-500">· for specialists</span></summary>
+    <details className="group rounded-xl border border-slate-200 bg-white">
+      <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4">
+        <span className="flex items-baseline gap-2 text-lg font-semibold text-accent-900" style={{ fontFamily: 'var(--font-serif)' }}>
+          <span aria-hidden className="text-accent-600">A</span>Technical appendix
+        </span>
+        <span className="text-xs text-slate-500">Processing, peak table, methods and evidence <span aria-hidden className="ml-1 inline-block transition group-open:rotate-180">▾</span></span>
+      </summary>
       <div className="space-y-8 border-t border-slate-200 px-5 py-6">
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200 lg:grid-cols-4">
+        <dl className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200 lg:grid-cols-4">
           {b.metrics.map(m => (
-            <div key={m.label} className="bg-white px-4 py-3">
-              <dt className="text-xs text-slate-500">{m.label}</dt>
-              <dd className="mt-1 text-lg font-semibold text-slate-900">{m.value}</dd>
+            <div key={m.label} className="border-slate-200 px-4 py-3 lg:border-l lg:first:border-l-0">
+              <dt className="text-[10.5px] tracking-wide text-slate-500 uppercase">{m.label}</dt>
+              <dd className="mt-0.5 text-lg font-semibold text-slate-900">{m.value}</dd>
               {m.note && <dd className="text-[11px] text-slate-400">{m.note}</dd>}
             </div>
           ))}
         </dl>
         <section>
-          <h3 className="mb-2 text-sm font-semibold text-slate-900">Processed spectrum with all detected peaks</h3>
-          <SpectrumPlot r={r.sections.spectrum.data} kind="processed" height={300} />
+          <FigurePair
+            two={<SpectrumPlot r={r.sections.spectrum.data} kind="processed" height={300} />}
+            three={<Figure3D data={stages3d(r)} height={320} label="Processing stages from raw counts to processed spectrum, stacked in depth"
+              xTitle="Raman shift (cm⁻¹)" yTitle="" zTitle="Scaled intensity" aspect={{ x: 2.3, y: 1.1, z: 0.7 }} yTicks={STAGE_TICKS}
+              xRange={[Math.min(...r.sections.spectrum.data.x), Math.max(...r.sections.spectrum.data.x)]} zRange={[0, 1.05]} />} />
+          <Caption n="2">Processed spectrum with every detected peak (left), and each processing stage on its own track, from raw counts through the fitted baseline to the final spectrum (right).</Caption>
         </section>
         <div className="grid gap-8 lg:grid-cols-2">
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-slate-900">Principal peaks</h3>
+            <h3 className="mb-2 text-xs font-semibold tracking-wider text-slate-600 uppercase">Table 1 · Principal peaks</h3>
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-slate-300 text-left text-xs text-slate-500"><th className="py-2 pr-3 font-medium">Position (cm⁻¹)</th><th className="py-2 pr-3 font-medium">Rel. intensity</th><th className="py-2 font-medium">Tentative region</th></tr></thead>
+              <thead><tr className="border-b border-accent-100 bg-mint text-left text-xs text-accent-900"><th className="px-2 py-2 font-semibold">Position (cm⁻¹)</th><th className="px-2 py-2 font-semibold">Rel. intensity</th><th className="px-2 py-2 font-semibold">Tentative region</th></tr></thead>
               <tbody>{b.peaks.map(p => (
                 <tr key={p.position} className="border-b border-slate-100">
-                  <td className="py-1.5 pr-3 tabular-nums">{p.position.toFixed(0)}</td>
-                  <td className="py-1.5 pr-3 tabular-nums">{p.relative_height.toFixed(2)}</td>
-                  <td className="py-1.5 text-slate-600">{p.assignment ?? '—'}</td>
+                  <td className="px-2 py-1.5 tabular-nums">{p.position.toFixed(0)}</td>
+                  <td className="px-2 py-1.5 tabular-nums">{p.relative_height.toFixed(2)}</td>
+                  <td className="px-2 py-1.5 text-slate-600">{p.assignment ?? '—'}</td>
                 </tr>))}</tbody>
             </table>
           </section>
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-slate-900">Reliability notes</h3>
-            <Bullets items={r.evaluation?.headline ? [...b.limitations, r.evaluation.headline] : b.limitations} />
+            <h3 className="mb-2 text-xs font-semibold tracking-wider text-slate-600 uppercase">Method notes and limitations</h3>
+            <Bullets items={notes} />
           </section>
         </div>
         {e && (
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-slate-900">Evidence behind the summary</h3>
+            <h3 className="mb-2 text-xs font-semibold tracking-wider text-slate-600 uppercase">Evidence behind the summary</h3>
             <ol className="space-y-1 text-sm text-slate-600">{e.evidence.map(x => <li key={x.id}><span className="font-mono text-xs text-slate-400">{x.id}</span> <b className="font-medium text-slate-800">{x.label}.</b> {x.text}</li>)}</ol>
             <p className="mt-2 text-xs text-slate-500">{e.source === 'llm_verified' ? 'Summary written by AI from these facts and checked automatically.' : 'Summary written from fixed templates using these facts.'}</p>
           </section>
@@ -218,37 +336,42 @@ export function ResearchReport({ r, onNew }: { r: FullReport; onNew: () => void 
   const when = new Date(r.generated_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
   const v = r.visual
   const e = r.explanation
-  const found = (e?.what_we_found.map(f => f.text) ?? r.brief.findings).slice(0, 3)
-  const next = (e?.next_steps ?? r.brief.recommendations).slice(0, 3)
+  const found = (e?.what_we_found.map(f => f.text) ?? r.brief.findings).slice(0, 4)
+  const next = (e?.next_steps ?? r.brief.recommendations).slice(0, 4)
+  const meta: [string, string][] = [['Report ID', r.brief.report_id], ['Issued', when], ['Software', `RamanReach ${r.software_version}`], ['Classification', 'Research use']]
   return (
-    <article aria-label="Analysis report" className="card fade-up mx-auto max-w-4xl overflow-hidden">
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-slate-200 px-6 py-5 sm:px-10">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">Spectrum analysis report</h1>
-          <p className="mt-1 text-sm text-slate-500"><span className="font-medium text-slate-700">{r.sample_id}</span> · {when}</p>
+    <article aria-label="Analysis report" className="fade-up mx-auto mt-6 max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_-36px_rgba(15,102,68,0.35)]">
+      <div aria-hidden className="h-1.5 bg-gradient-to-r from-accent-900 via-accent-600 to-accent-400" />
+      <header className="border-b-2 border-accent-900/80 px-6 pt-6 pb-5 sm:px-10">
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div>
+            <p className="kicker">RamanReach · Spectroscopy Research Lab</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[28px]" style={{ fontFamily: 'var(--font-serif)' }}>Spectrum analysis report</h1>
+            <p className="mt-1 text-sm text-slate-500">Automated processing, peak detection and reference comparison · <span className="font-medium text-slate-700">{r.sample_id}</span></p>
+          </div>
+          <Actions r={r} onNew={onNew} />
         </div>
-        <Actions r={r} onNew={onNew} />
+        <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-4">
+          {meta.map(([k, val]) => <div key={k}><dt className="text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{val}</dd></div>)}
+        </dl>
       </header>
 
       <div className="space-y-10 px-6 py-8 sm:px-10">
-        {v && <Answer r={r} v={v} />}
+        <section><H n="1">Sample information</H><SampleInfo r={r} /></section>
+        {v && <section><H n="2">Result summary</H><Answer r={r} v={v} /></section>}
         {v && <Overlay v={v} />}
         {v && (
-          <div className="grid gap-10 md:grid-cols-2">
+          <div className="space-y-10">
             <Candidates v={v} />
             <Checks v={v} />
           </div>
         )}
-        <div className="grid gap-10 md:grid-cols-2">
-          <section><H>What this means</H><Bullets items={found} /></section>
-          <section><H>What to do next</H><Bullets items={next} /></section>
+        <div className="grid gap-10 lg:grid-cols-2">
+          <section><H n="6">Interpretation</H><Bullets items={found} /></section>
+          <section><H n="7">Recommendations</H><Bullets items={next} /></section>
         </div>
-        <Technical r={r} />
+        <Appendix r={r} />
       </div>
-
-      <footer className="border-t border-slate-200 bg-slate-50/70 px-6 py-4 text-xs leading-relaxed text-slate-500 sm:px-10">
-        RamanReach {r.software_version} · Research use only, not for medical, legal or safety decisions. A similarity score is not a probability; only materials in the reference library can be recognised.
-      </footer>
     </article>
   )
 }

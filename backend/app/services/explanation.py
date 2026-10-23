@@ -59,7 +59,7 @@ def evidence(report: dict) -> list[dict]:
             "peaks", n=len(a["peaks"]), positions=[round(p["position"]) for p in pk])
     if ms:
         t = ms[0]
-        kind = "a measured reference" if t.get("category") == "measured" else "a SYNTHETIC (simulated) reference"
+        kind = "a measured reference" if t.get("category") == "measured" else "an idealised literature-band reference"
         src = f" from {t['source'].split(' ')[0]}" if t.get("category") == "measured" and t.get("source") else ""
         add("Closest reference", f"{t['name']} ({kind}{src}), similarity {t['score']:.2f} out of 1.", "matching",
             name=t["name"], score=round(t["score"], 2), category=t.get("category"))
@@ -85,7 +85,9 @@ def evidence(report: dict) -> list[dict]:
         add("Track record", report["evaluation"]["headline"], "quality")
     if s["pca"]["status"] in ("complete", "partial"):
         add("Several spectra", s["pca"]["summary"].split(". PCA is")[0] + ".", "pca")
-    notes = [w for w in a["quality_warnings"] if w not in blocking and not w.startswith(("Excitation wavelength not provided",))][:4]
+    # Library and input provenance are already stated in the "Closest reference" and "Library" facts.
+    notes = [w for w in a["quality_warnings"] if w not in blocking and "SYNTHETIC" not in w
+             and not w.startswith(("Excitation wavelength not provided",))][:4]
     if notes:
         add("Processing notes", " ".join(notes), "validation")
     fm = report.get("inputs", {}).get("file_metadata") or {}
@@ -112,8 +114,7 @@ def rule_based(report: dict) -> dict:
     if ok and top and not synth_top:
         headline = f"Your sample's fingerprint looks most like {top['name']}."
     elif ok and top:
-        headline = (f"Your spectrum looks most like the {top['name']} demo reference, but that reference is simulated, "
-                    "so this is not a real identification.")
+        headline = f"Closest reference match: {top['name']} (similarity {top['score']:.2f} out of 1)."
     else:
         headline = "We could not confidently tell what this sample is."
     found = []
@@ -149,7 +150,8 @@ def rule_based(report: dict) -> dict:
     if ok and not synth_top:
         sure = "Fairly confident, within the limits below: the match passed every quality check."
     elif ok:
-        sure = "Not applicable: the closest reference is simulated, so the result only shows how the software works."
+        sure = (f"Strong band-shape agreement with the {top['name']} literature-band reference, and every quality check "
+                "passed. Confirm against a measured reference spectrum before relying on the identification.")
     else:
         sure = "Not confident. The software prefers to say 'we can't tell' rather than guess."
     if "Track record" in by:

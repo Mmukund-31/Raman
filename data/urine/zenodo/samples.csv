@@ -1,0 +1,251 @@
+sample_id,class,group,n_replicates
+VAH88,Diabetic Nephropathy (DN),diabetic,10
+VAH89,Diabetic Nephropathy (DN),diabetic,10
+VAH92,Diabetic Nephropathy (DN),diabetic,10
+VAH95,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH100,Diabetic Nephropathy (DN),diabetic,10
+VAH2,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH3,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH4,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH7,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH10,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH12,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH14,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH15,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH18,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH19,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH22,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH23,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH27,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH28,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH29,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH30,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH32,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH34,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH36,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH37,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH38,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH40,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH42,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH45,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH48,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH53,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH58,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH59,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH60,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH64,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH67,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH70,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH71,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH74,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH75,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH76,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH77,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH84,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH86,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH90,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH93,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH97,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH98,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH102,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH105,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH113,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH147,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH149,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH150,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH152,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH154,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH155,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH156,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH157,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH159,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH161,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH166,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH172,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH177,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH181,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH182,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH185,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH187,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH190,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH191,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,9
+VAH201,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH220,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH226,Non-Diabetic (no biopsy) (DM-),non_diabetic_ckd,10
+VAH258,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH5,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH6,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH8,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH9,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH11,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH13,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH17,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH20,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH21,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH24,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH25,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH26,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH31,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH35,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH39,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH41,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH43,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH44,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH46,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH47,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH49,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH50,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH51,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH52,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH54,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH55,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH56,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH57,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH61,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH62,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH63,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH65,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH66,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH68,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH69,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH72,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH73,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH78,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH79,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH80,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH81,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH82,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH83,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH85,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH87,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH91,Other,non_diabetic_ckd,10
+VAH94,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH95,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH96,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH99,Other,non_diabetic_ckd,10
+VAH101,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH104,Other,non_diabetic_ckd,10
+VAH106,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH110,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH111,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH112,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH114,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH115,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH116,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH117,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH118,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH119,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH120,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH121,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH123,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH124,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH125,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH126,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH127,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH128,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH129,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH130,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH131,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH132,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH133,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH134,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH135,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH136,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH137,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH138,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH139,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH140,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH141,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH143,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH144,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH145,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH146,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH148,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH151,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH153,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH158,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH160,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH162,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH163,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH164,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH165,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH167,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH168,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH169,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH171,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH173,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH174,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH175,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH176,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH179,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH180,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH183,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH184,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH186,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH188,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH189,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH192,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH193,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH195,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH196,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH197,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH198,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH199,Diabetes Mellitus (no biopsy) (DM+),diabetic,8
+VAH200,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH202,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH203,Diabetes Mellitus (no biopsy) (DM+),diabetic,9
+VAH204,Renal Neoplasm,non_diabetic_ckd,10
+VAH205,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH207,Diabetes Mellitus (no biopsy) (DM+),diabetic,10
+VAH109,Diabetic Nephropathy (DN),diabetic,10
+VAH232,Diabetic Nephropathy (DN),diabetic,10
+VAH248,Diabetic Nephropathy (DN),diabetic,10
+VAH261,Diabetic Nephropathy (DN),diabetic,10
+VAH269,Diabetic Nephropathy (DN),diabetic,10
+HHS54,Healthy Volunteers,healthy,10
+HHS55,Healthy Volunteers,healthy,10
+HHS57,Healthy Volunteers,healthy,10
+HHS58,Healthy Volunteers,healthy,10
+HHS59,Healthy Volunteers,healthy,10
+HHS62,Healthy Volunteers,healthy,10
+HHS63,Healthy Volunteers,healthy,10
+HHS65,Healthy Volunteers,healthy,10
+HHS68,Healthy Volunteers,healthy,10
+HHS69,Healthy Volunteers,healthy,10
+HHS71,Healthy Volunteers,healthy,10
+HHS72,Healthy Volunteers,healthy,10
+HHS74,Healthy Volunteers,healthy,10
+HHS76,Healthy Volunteers,healthy,10
+HHS77,Healthy Volunteers,healthy,10
+HHS78,Healthy Volunteers,healthy,10
+HHS79,Healthy Volunteers,healthy,10
+HHS80,Healthy Volunteers,healthy,10
+HHS81,Healthy Volunteers,healthy,10
+HHS82,Healthy Volunteers,healthy,10
+HHS83,Healthy Volunteers,healthy,10
+HHS84,Healthy Volunteers,healthy,10
+HHS85,Healthy Volunteers,healthy,10
+HHS86,Healthy Volunteers,healthy,10
+HHS87,Healthy Volunteers,healthy,10
+VAH93,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH98,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH103,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH105,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH107,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH122,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH142,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH201,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH206,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH258,Immune-Mediated Nephropathy (IMN),non_diabetic_ckd,10
+VAH90,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH94,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH97,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH101,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH106,Membranous Nephropathy (MN),non_diabetic_ckd,10
+VAH91,Other,non_diabetic_ckd,10
+VAH99,Other,non_diabetic_ckd,10
+VAH104,Other,non_diabetic_ckd,10
+VAH270,Other,non_diabetic_ckd,10
+VAH108,Renal Neoplasm,non_diabetic_ckd,10
+VAH204,Renal Neoplasm,non_diabetic_ckd,10
+VAH275,Renal Neoplasm,non_diabetic_ckd,10

@@ -167,4 +167,4 @@ def test_llm_is_off_without_a_key(monkeypatch):
 def test_html_report_leads_with_the_plain_answer(ok_report):
     from app.services import report_html
     html = report_html.build(copy.deepcopy(ok_report))
-    assert html.index(ok_report["explanation"]["headline"]) < html.index("Technical details")
+    assert html.index(ok_report["explanation"]["headline"]) < html.index("Technical appendix")

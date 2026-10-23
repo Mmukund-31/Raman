@@ -12,10 +12,12 @@ from .research_routes import router as research_router
 from .services import evaluation_real, orchestrator, pipeline, report_html, reporting
 from .services.formats import parse_any
 from .services.validation import MAX_BYTES, ValidationError
+from .urine_routes import router as urine_router
 
 app = FastAPI(title="RamanReach API", version=pipeline.VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.include_router(research_router)
+app.include_router(urine_router)
 
 
 class Options(BaseModel):

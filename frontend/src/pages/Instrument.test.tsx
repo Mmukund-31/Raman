@@ -49,12 +49,10 @@ describe('Instrument page', () => {
     expect((await scene()).dataset.exploded).toBe('true')
   })
 
-  it('credits the source, uses no copied images and links back to analysis', async () => {
+  it('uses no copied images, keeps the laser-safety warning and links back to analysis', async () => {
     const onAnalyze = vi.fn()
     render(<Instrument onAnalyze={onAnalyze} />)
     await scene()
-    expect(screen.getByRole('link', { name: 'CubeRaman' }).getAttribute('href')).toBe('https://github.com/jacobbusshart/CubeRaman')
-    expect(screen.getByRole('link', { name: 'build video' })).toBeTruthy()
     expect(document.querySelectorAll('img')).toHaveLength(0)
     expect(screen.getByText(/Class 3B/, { selector: 'p' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Analyze a spectrum' }))

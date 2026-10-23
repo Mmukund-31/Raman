@@ -77,7 +77,7 @@ export interface VisualSummary {
     x: number[]; sample: number[]; reference: { x: number[]; y: number[] } | null; reference_name: string | null
     reference_category?: string; peaks: number[]; peak_heights: number[]
   }
-  candidates: { items: { name: string; score: number; category?: string; top: boolean }[]; threshold: number; named: boolean }
+  candidates: { items: { name: string; score: number; category?: string; coverage?: number; rank_score?: number; top: boolean }[]; threshold: number; named: boolean }
   checks: { id: string; label: string; passed: boolean; detail: string }[]
 }
 export interface EvaluationSummary {
@@ -88,7 +88,8 @@ export interface EvaluationSummary {
 
 export interface FullReport {
   report_version: string; software_version: string; generated_at: string; sample_id: string; source: string; brief: Brief
-  declared_origin: Origin; data_provenance: Provenance & { sample: { declared_origin?: string } }; is_diagnostic: false
+  declared_origin: Origin; is_diagnostic: false
+  data_provenance: Provenance & { sample: { declared_origin?: string }; n_materials?: number; n_reference_spectra?: number; references_by_category?: Record<string, number> }
   inputs: { n_spectra: number; additional: string[]; options: Options; metadata: Record<string, unknown>; truth_label: string | null }
   executive_summary: {
     analyzed: string; findings: string[]; confidence: string; status: 'ok' | 'inconclusive'

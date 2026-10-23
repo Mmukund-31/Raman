@@ -171,12 +171,12 @@ def test_html_report_is_a_concise_brief(single):
     resp = client.post("/api/full-report/html", json=r)
     assert resp.status_code == 200
     html = resp.text
-    for h in ("How sure are we?", "How close were the candidates?", "Checks we ran", "What this means", "What to do next",
-              "Technical details", "Principal peaks", "Reliability notes", "Methods."):
+    for h in ("Sample information", "Result summary", "Candidate ranking", "Quality control", "Interpretation", "Recommendations",
+              "Technical appendix", "Principal peaks", "Method notes and limitations", "Methods"):
         assert h in html
-    assert html.index("How sure are we?") < html.index("Technical details")  # the picture-first summary comes first
+    assert html.index("Result summary") < html.index("Technical appendix")  # the summary page comes first
     assert r["explanation"]["headline"] in html and r["brief"]["report_id"] in html
-    assert html.count("<svg") == 2  # the overlay figure and the technical spectrum
+    assert html.count("<svg") == 3  # letterhead logo, the overlay figure and the technical spectrum
     assert "Not performed:" in html and "requires a labelled training dataset" in html
     assert "not a probability" in html.lower() and "synthetic" in html.lower()
     assert "<svg" in html and "@media print" in html
@@ -203,7 +203,7 @@ def test_brief_never_claims_a_match_when_inconclusive():
     assert any("likely noise" in f for f in b["findings"])
     assert "signal-to-noise" in b["limitations"][0].lower()
     html = report_html.build(r)
-    assert "No clear match" in html and "Match found" not in html
+    assert "No confident match" in html and "Confirmed match" not in html and "Probable match" not in html
 
 
 def test_html_report_escapes_user_text():
@@ -219,3 +219,12 @@ def test_omitted_boolean_options_keep_their_defaults():
                     data={"stream": "false", "baseline": "false"}).json()
     assert r["inputs"]["options"]["baseline"] is False
     assert post_full({"file": ("s.csv", ex_bytes(), "text/csv")}, {"smooth": "maybe"}).status_code == 422
+
+
+def test_candidate_ranking_reports_the_score_it_is_ordered_by(single):
+    items = single[-1]["report"]["visual"]["candidates"]["items"]
+    ranks = [c["rank_score"] for c in items]
+    assert ranks == sorted(ranks, reverse=True)
+    assert all(0 <= c["coverage"] <= 1 and c["rank_score"] <= c["score"] + 1e-9 for c in items)
+    html = client.post("/api/full-report/html", json=single[-1]["report"]).text
+    assert all(h in html for h in ("Ranking score", "Coverage", "Similarity"))

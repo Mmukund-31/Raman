@@ -1,0 +1,27 @@
+{
+  "dataset_id": "zenodo",
+  "name": "Urine Raman spectra, diabetes mellitus and renal pathologies",
+  "category": "measured",
+  "doi": "10.5281/zenodo.7343559",
+  "url": "https://zenodo.org/records/7343559",
+  "license": "CC BY 1.0",
+  "citation": "Senger R.S., Robertson J.L., Kavuru V., Choudhury D. (2022) Raman spectra of urine from patients with diabetes mellitus and other pathologies. Zenodo. doi:10.5281/zenodo.7343559. Analysis: Kavuru V. et al. (2023) PeerJ 11:e14879, doi:10.7717/peerj.14879.",
+  "instrument": "Agiltron PeakSeeker PRO-785, bulk liquid, 30 mW, 30 s, 8 cm-1 resolution",
+  "excitation_nm": 785,
+  "range_cm1": [
+    400.0,
+    1800.0
+  ],
+  "step_cm1": 2.0,
+  "n_spectra": 250,
+  "groups": {
+    "diabetic": 127,
+    "non_diabetic_ckd": 98,
+    "healthy": 25
+  },
+  "excluded": {
+    "Surine": 33
+  },
+  "processing": "Median of replicate scans, cropped to 400-1800 cm-1, linearly resampled to 2 cm-1; no other change.",
+  "caveat": "All DM+ and DM- patients have chronic kidney disease; group differences may reflect kidney disease, medication, diet or collection conditions as well as diabetes."
+}
